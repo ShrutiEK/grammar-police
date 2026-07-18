@@ -10,17 +10,17 @@ export const picturePrompts: PicturePrompt[] = [
   {
     imageUrl:
       "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=85",
-    alt: "Children playing soccer together on a grassy field",
-    title: "Picture Mission 1: The Soccer Game",
+    alt: "Friends watching a sunset",
+    title: "Picture Mission 1: The Sunset and Friendship",
     instruction: "Describe what is happening in this soccer match.",
     description: "Children playing football/soccer together on a grassy field.",
   },
   {
     imageUrl:
       "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=1200&q=85",
-    alt: "Students studying together in a classroom library",
-    title: "Picture Mission 2: The Study Group",
-    instruction: "Describe the students studying in the classroom.",
+    alt: "A student walking through the library",
+    title: "Picture Mission 2: The library",
+    instruction: "Describe your last visit to a library",
     description:
       "Students studying and reading books together in a classroom or library.",
   },
