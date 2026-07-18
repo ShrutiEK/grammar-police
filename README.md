@@ -1,11 +1,18 @@
 # Grammar Police
 
-Grammar Police is a personalised English speaking tutor. The Phase 1 MVP will
-let a learner describe a picture, transcribe their response, assess their English,
-and recommend the next lesson.
+Grammar Police is an English-only adaptive speaking and reading tutor. Learners
+describe rich scenes, answer relevant follow-up questions, read prompts aloud,
+and practise activities such as idioms and reading comprehension. The AI uses
+their responses to explain learning gaps, recommend a skill track, generate a
+lesson, and show progress over time.
 
-Version 1 treats every assessment as an independent session. It does not persist
-learner performance, recordings, or lessons.
+The current prototype implements the first assessment loop: record a response
+to a picture, transcribe it, assess it, and display feedback. It stores only
+the current browser session in `localStorage`; it does not yet persist a learner
+profile, generate adaptive lessons, or maintain a learning graph.
+
+See [product context](docs/PRODUCT_CONTEXT.md) for the agreed product behaviour
+and [delivery roadmap](docs/ROADMAP.md) for tracked work.
 
 ## Prerequisites
 
@@ -20,14 +27,14 @@ Install dependencies:
 pnpm install
 ```
 
-Copy the environment template when OpenAI integration is added:
+Copy the environment template to enable Sarvam transcription and assessment:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Keep `OPENAI_API_KEY` server-side. The initial application shell does not require
-the key to run.
+Keep `SARVAM_API_KEY` server-side. The application shell can run without it,
+but real assessments require the key.
 
 ## Development
 
