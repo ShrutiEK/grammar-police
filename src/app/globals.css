@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #fff9ed;
+  --color-ink: #17213d;
+  --color-muted: #4f5870;
+  --color-accent: #ffbd3e;
+  --color-accent-soft: #ffe39a;
+  --color-support: #bfe8dd;
+  --color-eyebrow: #7a3e00;
+  --font-sans:
+    Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+  --shadow-card: 10px 10px 0 #17213d;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply m-0 bg-canvas font-sans text-ink antialiased;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .assessment-card {
+    @apply w-full max-w-3xl rounded-4xl border-[3px] border-ink bg-white/90 px-8 py-10 text-center shadow-card sm:px-16 sm:py-16;
+  }
+
+  .section-eyebrow {
+    @apply mb-3 text-sm font-bold tracking-wider text-eyebrow uppercase;
+  }
+
+  .primary-button {
+    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-6 py-3 font-bold text-ink transition-transform enabled:hover:-translate-y-0.5 enabled:focus-visible:outline-3 enabled:focus-visible:outline-offset-4 enabled:focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-65;
+  }
+}
