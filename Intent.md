@@ -2,7 +2,10 @@
 
 ## Goal
 
-Build an end-to-end MVP that demonstrates an AI tutor capable of listening to a user speak, identifying their English learning gaps, generating a personalized learning roadmap, creating a custom lesson, and tracking progress.
+Build an end-to-end MVP that demonstrates an English-only AI tutor capable of
+listening to a user speak, understanding the context of a rich scene, asking a
+relevant personal follow-up, identifying English learning gaps, generating a
+personalized learning roadmap, creating a custom lesson, and tracking progress.
 
 The demo should feel magical within the first minute. Prioritize AI interactions over CRUD functionality.
 
@@ -17,6 +20,7 @@ Our product acts like a personal English tutor.
 Instead of following a fixed curriculum, the AI:
 
 * listens to the user speak
+* connects what the learner says about an image to a relevant conversation
 * diagnoses strengths and weaknesses
 * explains its reasoning
 * generates an individualized learning roadmap
@@ -39,7 +43,7 @@ Button:
 
 ## 2. Speaking Assessment
 
-Display a large image.
+Display a large, rich image with multiple visible subjects and actions.
 
 Example:
 
@@ -52,13 +56,16 @@ Prompt:
 
 > "Describe everything you see in this picture."
 
-user speaks for approximately 30 seconds.
+The learner speaks for approximately 30 seconds. The system then asks one
+personal, open-ended question relevant to what they mentioned. For example, a
+learner who mentions a kite may be asked whether they have ever flown one; a
+learner who mentions football may be asked about sports and hobbies.
 
 ---
 
 ## 3. Speech Processing
 
-Convert speech to text using OpenAI speech models.
+Convert English speech to text using the selected speech provider.
 
 Show an animated "AI is listening..." state.
 
@@ -80,6 +87,10 @@ Return structured JSON containing:
 * strengths
 * weaknesses
 * recommended next concepts
+
+For read-aloud activities, compare speech against the known reference text and
+use audio-aware provider signals for pronunciation and fluency. Do not present a
+transcript-only estimate as a precise pronunciation measurement.
 
 Display an animated analysis screen while this happens.
 
@@ -153,6 +164,12 @@ Ask the user to describe it while correctly using:
 * the
 
 The lesson should clearly indicate it was generated specifically for this user.
+
+Lesson formats may include scene conversation, read-aloud prompts, illustrated
+idiom practice, and reading-comprehension explanations. Product-supplied poems,
+comic lines, and other reading material must be free-to-use, public-domain,
+openly licensed, or original. Learners may paste material they are authorised to
+access; it must remain private user input and must not be redistributed.
 
 ---
 
@@ -248,6 +265,16 @@ Prioritize:
 * colorful but accessible design
 * responsive layout
 * delightful micro-interactions
+
+Use relevant, appropriately licensed open images or original illustrations to
+make scenes and lessons engaging. Animation must communicate meaningful state
+or reward progress, and must respect reduced-motion preferences. Keep the
+experience playful and warm without distracting from recording, reading, or
+feedback.
+
+When authentication and age capture are introduced, activities must adapt their
+reading level, vocabulary, themes, feedback, and safety constraints to the
+learner's age range.
 
 Every AI step should feel intentional and intelligent.
 
