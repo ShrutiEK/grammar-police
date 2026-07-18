@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_15%_20%,var(--color-accent-soft)_0,transparent_28%),radial-gradient(circle_at_85%_80%,var(--color-support)_0,transparent_30%)] p-5 sm:p-8">
@@ -12,20 +14,18 @@ export default function HomePage() {
         <p className="mx-auto mt-6 mb-8 max-w-lg text-[clamp(1.1rem,3vw,1.35rem)] leading-relaxed">
           Describe a picture and get a lesson shaped around your English.
         </p>
-        <button
-          className="primary-button"
-          type="button"
-          disabled
-          aria-describedby="foundation-note"
+        <Link
+          className="primary-button inline-flex items-center justify-center font-bold text-center no-underline"
+          href="/assessment"
         >
           Start English Assessment
-        </button>
+        </Link>
         <p
           id="foundation-note"
           className="mt-4 text-sm text-muted"
           role="status"
         >
-          Speaking assessments are coming next.
+          Start with one short picture description.
         </p>
       </section>
     </main>
