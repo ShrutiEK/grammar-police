@@ -31,11 +31,9 @@ export function LessonLoader() {
         const input = savedAssessment ?? demoLessonAssessment;
         const isDemo = savedAssessment === null;
         setState({ lesson: createPersonalisedLesson(input), isDemo });
-      } catch (error) {
+      } catch {
         setLoadError(
-          error instanceof Error
-            ? error.message
-            : "We could not open this learning assessment.",
+          "We couldn’t open your next challenge. Return to the conversation and try again.",
         );
       }
     }, 0);
@@ -51,9 +49,9 @@ export function LessonLoader() {
           <p className="mt-3 text-muted">{loadError}</p>
           <Link
             className="primary-button mt-6 inline-flex no-underline"
-            href="/assessment"
+            href="/"
           >
-            Return to assessment
+            Return to the conversation
           </Link>
         </section>
       </main>

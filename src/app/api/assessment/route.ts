@@ -79,8 +79,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "Please submit either a recording, a written answer, or a pending transcription.",
+          error: "Please share either a recording or a written answer.",
         },
         { status: 400 },
       );
@@ -116,21 +115,21 @@ export async function POST(request: Request) {
 
     if (!currentQuestion || currentQuestion.length > 500) {
       return NextResponse.json(
-        { error: "The assessment question is invalid." },
+        { error: "We couldn’t read the current prompt. Please try again." },
         { status: 400 },
       );
     }
 
     if (!currentQuestionType.success) {
       return NextResponse.json(
-        { error: "The assessment question type is invalid." },
+        { error: "We couldn’t continue this conversation. Please try again." },
         { status: 400 },
       );
     }
 
     if (!conversationContext.success) {
       return NextResponse.json(
-        { error: "The conversation history is invalid." },
+        { error: "We couldn’t read this conversation. Please try again." },
         { status: 400 },
       );
     }
@@ -152,7 +151,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Student assessment failed", error);
     return NextResponse.json(
-      { error: "We could not assess that answer. Please try again." },
+      { error: "We couldn’t check that answer. Try sharing it again." },
       { status: 500 },
     );
   }

@@ -8,7 +8,7 @@ export function ConversationHistory({ turns }: ConversationHistoryProperties) {
   return (
     <details className="group rounded-2xl border-2 border-ink bg-surface shadow-[5px_5px_0_#17213d] sm:rounded-3xl">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-bold text-ink marker:hidden sm:px-5">
-        <span>Conversation history ({turns.length})</span>
+        <span>What we’ve talked about ({turns.length})</span>
         <span
           aria-hidden="true"
           className="text-lg transition-transform group-open:rotate-180"
@@ -23,7 +23,7 @@ export function ConversationHistory({ turns }: ConversationHistoryProperties) {
             key={turn.number}
           >
             <p className="text-base font-bold text-ink">
-              Q{turn.number}. {turn.question}
+              Prompt {turn.number}. {turn.question}
             </p>
             <p className="mt-1 text-base leading-relaxed text-muted">
               {turn.answer ? (
@@ -35,7 +35,7 @@ export function ConversationHistory({ turns }: ConversationHistoryProperties) {
                   {turn.answer}
                 </>
               ) : (
-                "Awaiting your answer"
+                "Ready for your answer"
               )}
             </p>
           </li>

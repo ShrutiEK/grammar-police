@@ -14,8 +14,8 @@ const atkinsonHyperlegible = Atkinson_Hyperlegible({
 });
 
 export const metadata: Metadata = {
-  title: "Grammar Police",
-  description: "A personalised English speaking tutor.",
+  title: "English Spark",
+  description: "Friendly English conversation practice shaped around you.",
 };
 
 type RootLayoutProperties = Readonly<{

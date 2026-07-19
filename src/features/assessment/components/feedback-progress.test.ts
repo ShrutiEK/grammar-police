@@ -16,7 +16,7 @@ describe("FeedbackProgress", () => {
       }),
     );
 
-    expect(markup).toContain("2/6 insights calculated");
+    expect(markup).toContain("2 of 6 highlights ready");
     expect(markup).toContain("Grammar");
     expect(markup).toContain("Spelling and writing");
     expect(markup).toContain('role="progressbar"');
@@ -34,8 +34,8 @@ describe("FeedbackProgress", () => {
       }),
     );
 
-    expect(markup).toContain("Summarizing your learning map");
-    expect(markup).toContain("most useful next skill");
+    expect(markup).toContain("Finishing your feedback");
+    expect(markup).toContain("most useful next step");
     expect(markup).toContain('aria-valuenow="100"');
   });
 });

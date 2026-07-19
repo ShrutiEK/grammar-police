@@ -90,7 +90,7 @@ async function requestAssessmentOnce({
     throw new Error(
       errorResponse.success
         ? errorResponse.data.error
-        : "We could not assess that answer. Please try again.",
+        : "We couldn’t check that answer. Try sharing it again.",
     );
   }
 
