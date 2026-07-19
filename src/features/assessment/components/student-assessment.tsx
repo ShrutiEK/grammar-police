@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { saveLessonAssessment } from "@/features/lesson/lesson-assessment-storage";
-import { picturePromptsByFilename } from "@/features/picture-prompt/picture-prompt.data";
+import {
+  pictureFilenames,
+  picturePromptsByFilename,
+} from "@/features/picture-prompt/picture-prompt.data";
 import { useAudioRecorder } from "@/features/recording/use-audio-recorder";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
@@ -53,8 +56,13 @@ export function StudentAssessment({
   const router = useRouter();
   const { recording, recordingState, startRecording, stopRecording, reset } =
     useAudioRecorder();
-  const { session, recordResult, advanceToNextQuestion, resetSession } =
-    useAssessmentSession(initialPictureFilename);
+  const {
+    session,
+    recordResult,
+    advanceToNextQuestion,
+    switchPicture,
+    resetSession,
+  } = useAssessmentSession(initialPictureFilename);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<PictureConversationFeedback | null>(
     null,
@@ -86,8 +94,22 @@ export function StudentAssessment({
     currentTurn.answer && currentTurn.assessment
       ? { transcript: currentTurn.answer, assessment: currentTurn.assessment }
       : null;
+  const allConversationTurns = [
+    ...(session.previousPictureSessions ?? []).flatMap(
+      (pictureSession) => pictureSession.questionsAndAnswers,
+    ),
+    ...session.questionsAndAnswers,
+  ];
+  const viewedPictures = session.viewedPictureFilenames ?? [
+    ...(session.previousPictureSessions ?? []).map(
+      (pictureSession) => pictureSession.selectedPictureFilename,
+    ),
+    session.selectedPictureFilename,
+  ];
+  const hasUnseenPicture =
+    new Set(viewedPictures).size < pictureFilenames.length;
   const isCheckpoint = ASSESSMENT_CHECKPOINTS.some(
-    (checkpoint) => checkpoint === session.questionsAndAnswers.length,
+    (checkpoint) => checkpoint === currentTurn.number,
   );
 
   function resetAssessment() {
@@ -117,7 +139,21 @@ export function StudentAssessment({
 
   function startNewPicture() {
     setAssessmentHistory(archiveCurrentAssessment());
-    resetAssessment();
+
+    if (currentTurn.number >= MAX_QUESTIONS) {
+      resetAssessment();
+      return;
+    }
+
+    if (!hasUnseenPicture) {
+      return;
+    }
+
+    switchPicture();
+    setFeedback(null);
+    setAssessmentError(null);
+    setWrittenAnswer("");
+    reset();
   }
 
   function continueToNextQuestion() {
@@ -208,6 +244,70 @@ export function StudentAssessment({
       setFeedbackProgress(null);
       setPendingCtaAction(null);
       logAssessmentProgress("feedback request finished");
+    }
+  }
+
+  async function changePictureDuringAssessment() {
+    if (pendingCtaAction) {
+      return;
+    }
+
+    setAssessmentError(null);
+    setPendingCtaAction("change-picture");
+    setFeedbackProgress({
+      completedMetricIds: [],
+      stage: "reading",
+      totalMetrics: 0,
+    });
+
+    try {
+      const input = createPictureConversationInput(session);
+      const hasAssessableAnswer = input.turns.some(
+        (turn) => !turn.languageWarning && turn.isRelevantToFocus,
+      );
+
+      if (!hasAssessableAnswer) {
+        switchPicture();
+        setWrittenAnswer("");
+        reset();
+        return;
+      }
+
+      const cachedFeedback = loadPictureConversationFeedbackForInput(input);
+      let pictureFeedback = cachedFeedback;
+
+      if (!pictureFeedback) {
+        const response = await requestPictureConversationFeedback(input, {
+          onProgress: setFeedbackProgress,
+        });
+
+        if (response.status === "retry_later") {
+          setAssessmentError(response.message);
+          return;
+        }
+
+        savePictureConversationFeedback(input, response);
+        pictureFeedback = response;
+      }
+
+      const nextHistory = archivePictureAssessment({
+        feedback: pictureFeedback,
+        input,
+      });
+      setAssessmentHistory(nextHistory);
+      switchPicture();
+      setWrittenAnswer("");
+      reset();
+    } catch (error) {
+      logAssessmentProgress("picture change failed", {
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      setAssessmentError(
+        "We couldn’t save this part of your assessment. Please try changing the picture again.",
+      );
+    } finally {
+      setFeedbackProgress(null);
+      setPendingCtaAction(null);
     }
   }
 
@@ -308,19 +408,20 @@ export function StudentAssessment({
         <section className="mx-auto max-w-6xl space-y-6">
           <PictureConversationResults
             assessment={cumulativeAssessment}
-            canContinueConversation={
-              session.questionsAndAnswers.length < MAX_QUESTIONS
+            canContinueConversation={currentTurn.number < MAX_QUESTIONS}
+            canStartNewPicture={
+              currentTurn.number >= MAX_QUESTIONS || hasUnseenPicture
             }
             nextConversationPrompt={
               currentTurn.assessment?.nextQuestion ||
               feedback.nextConversationPrompt
             }
             pictureCount={cumulativeAttempts.length}
-            hasSpokenAnswers={session.questionsAndAnswers.some(
-              (turn) => turn.answerMode === "spoken",
+            hasSpokenAnswers={cumulativeAttempts.some((attempt) =>
+              attempt.input.turns.some((turn) => turn.answerMode === "spoken"),
             )}
-            hasWrittenAnswers={session.questionsAndAnswers.some(
-              (turn) => turn.answerMode === "written",
+            hasWrittenAnswers={cumulativeAttempts.some((attempt) =>
+              attempt.input.turns.some((turn) => turn.answerMode === "written"),
             )}
             onContinueConversation={() => {
               setFeedback(null);
@@ -328,7 +429,7 @@ export function StudentAssessment({
             }}
             onContinueLearning={() => {
               try {
-                saveLessonAssessment(feedback.assessment);
+                saveLessonAssessment(cumulativeAssessment);
                 router.push("/lesson");
               } catch {
                 setAssessmentError(
@@ -365,7 +466,18 @@ export function StudentAssessment({
         </header>
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
-          <PicturePromptCard prompt={currentPrompt} />
+          <PicturePromptCard
+            canChangePicture={hasUnseenPicture && !currentResult}
+            isChangeDisabled={
+              isAnalyzing ||
+              isTranscribingLongRecording ||
+              recordingState === "recording" ||
+              recordingState === "requesting-permission"
+            }
+            isChangingPicture={pendingCtaAction === "change-picture"}
+            prompt={currentPrompt}
+            onChangePicture={changePictureDuringAssessment}
+          />
           <RecordingPanel
             assessmentError={assessmentError}
             feedbackProgress={feedbackProgress}
@@ -390,17 +502,17 @@ export function StudentAssessment({
         {currentResult && (
           <AssessmentResults
             assessment={currentResult.assessment}
+            canChangePicture={hasUnseenPicture}
             isCheckpoint={isCheckpoint}
-            isFinalQuestion={
-              session.questionsAndAnswers.length >= MAX_QUESTIONS
-            }
+            isFinalQuestion={currentTurn.number >= MAX_QUESTIONS}
             pendingAction={pendingCtaAction}
+            onChangePicture={changePictureDuringAssessment}
             onContinue={prepareNextQuestion}
             onShowFeedback={showConversationFeedback}
           />
         )}
 
-        <ConversationHistory turns={session.questionsAndAnswers} />
+        <ConversationHistory turns={allConversationTurns} />
       </section>
     </main>
   );

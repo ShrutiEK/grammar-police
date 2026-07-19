@@ -2,11 +2,14 @@ import "server-only";
 
 import { z } from "zod";
 
-import { learnerAssessmentSchema } from "@/features/assessment/assessment.schema";
+import {
+  learnerAssessmentSchema,
+  type LearnerAssessment,
+} from "@/features/assessment/assessment.schema";
 import type { AssessStudentEnglishInput } from "@/features/assessment/student-answer-provider.types";
 import { createAssessmentPrompt } from "@/prompts/assessment/create-assessment-prompt";
 
-import { requestSarvam } from "./sarvam.client";
+import { requestOpenAi } from "./openai.client";
 
 const chatCompletionResponseSchema = z.object({
   choices: z
@@ -46,8 +49,10 @@ const assessmentJsonSchema = {
   ],
 } as const;
 
-export async function assessStudentEnglish(input: AssessStudentEnglishInput) {
-  const response = await requestSarvam("/v1/chat/completions", {
+export async function assessStudentEnglishWithOpenAi(
+  input: AssessStudentEnglishInput,
+): Promise<LearnerAssessment> {
+  const response = await requestOpenAi("/v1/chat/completions", {
     body: JSON.stringify({
       messages: [
         {
@@ -59,18 +64,15 @@ export async function assessStudentEnglish(input: AssessStudentEnglishInput) {
           role: "user",
         },
       ],
-      model: "sarvam-30b",
+      model: "gpt-5-mini",
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "picture_conversation_assessment",
+          name: "picture_conversation_answer_assessment",
           strict: true,
           schema: assessmentJsonSchema,
         },
       },
-      temperature: 0.2,
-      reasoning_effort: null,
-      max_tokens: 1000,
     }),
     headers: { "Content-Type": "application/json" },
     method: "POST",
@@ -79,7 +81,7 @@ export async function assessStudentEnglish(input: AssessStudentEnglishInput) {
   const [choice] = chatCompletionResponseSchema.parse(responseBody).choices;
 
   if (!choice) {
-    throw new Error("The assessment service returned no result.");
+    throw new Error("OpenAI returned no answer assessment result.");
   }
 
   const parsedContent: unknown = JSON.parse(
@@ -90,9 +92,7 @@ export async function assessStudentEnglish(input: AssessStudentEnglishInput) {
   );
   const assessment = learnerAssessmentSchema.parse(parsedContent);
 
-  if (input.focusTopic) {
-    return { ...assessment, focusTopic: input.focusTopic };
-  }
-
-  return assessment;
+  return input.focusTopic
+    ? { ...assessment, focusTopic: input.focusTopic }
+    : assessment;
 }

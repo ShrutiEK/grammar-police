@@ -299,16 +299,15 @@ the existing application integration and is suitable for low-latency, structured
 assessment of typed responses and speech transcripts. Use strict JSON Schema
 output, a low temperature, and no visible reasoning output.
 
-| Role                                 | Provider and model             | Use when                                                                                      |
-| ------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------- |
-| Primary metric evaluator             | Sarvam `sarvam-30b`            | Default assessment of picture-conversation turns.                                             |
-| Same-provider quality fallback       | Sarvam `sarvam-105b`           | The primary model returns an invalid/insufficient structured assessment after one safe retry. |
-| Cross-provider fallback              | OpenAI `gpt-5-mini`            | Sarvam is unavailable, times out, or returns an invalid structured assessment.                |
-| Additional cross-provider option     | Groq `openai/gpt-oss-20b`      | Future cost-sensitive option after its provider adapter is added.                             |
-| Higher-quality cross-provider option | Groq `llama-3.3-70b-versatile` | Future benchmarking or complex evaluations where latency/cost is acceptable.                  |
-| Primary transcription                | Sarvam `saaras:v3`             | Existing English speech-to-text integration. Request timestamps when fluency is in scope.     |
-| Transcription quality fallback       | Groq `whisper-large-v3`        | The primary transcript is unavailable or unreliable and a more accurate retry is needed.      |
-| Transcription speed fallback         | Groq `whisper-large-v3-turbo`  | Low-latency or lower-cost retry where slightly lower transcription accuracy is acceptable.    |
+| Role                                 | Provider and model              | Use when                                                                                      |
+| ------------------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------- |
+| Primary metric evaluator             | Sarvam `sarvam-30b`             | Default assessment of picture-conversation turns.                                             |
+| Same-provider quality fallback       | Sarvam `sarvam-105b`            | The primary model returns an invalid/insufficient structured assessment after one safe retry. |
+| Cross-provider fallback              | OpenAI `gpt-5-mini`             | Sarvam is unavailable, times out, or returns an invalid structured assessment.                |
+| Additional cross-provider option     | Groq `openai/gpt-oss-20b`       | Future cost-sensitive option after its provider adapter is added.                             |
+| Higher-quality cross-provider option | Groq `llama-3.3-70b-versatile`  | Future benchmarking or complex evaluations where latency/cost is acceptable.                  |
+| Primary transcription                | Sarvam `saaras:v3`              | Existing English speech-to-text integration. Request timestamps when fluency is in scope.     |
+| Transcription fallback               | OpenAI `gpt-4o-mini-transcribe` | Sarvam fails before returning a transcript; preserve the spoken language and original script. |
 
 This routing is a starting configuration, not a claim that one provider is best
 for every learner. Retain the same input, rubric, and output schema across all

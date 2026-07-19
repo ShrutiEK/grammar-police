@@ -1,26 +1,27 @@
 import "server-only";
 
+import { assessStudentEnglishWithOpenAi } from "@/integrations/openai/openai.assessment";
+import { transcribeStudentRecordingWithOpenAi } from "@/integrations/openai/openai.transcription";
 import { assessStudentEnglish } from "@/integrations/sarvam/sarvam.assessment";
 import {
   getStudentRecordingTranscription,
   transcribeStudentRecording,
-  type StudentRecordingTranscription,
 } from "@/integrations/sarvam/sarvam.transcription";
 
 import { enforceEnglishOnlyResponse } from "./english-only";
 import { selectFollowUpQuestion } from "./follow-up-question";
 import type { QuestionType } from "./assessment.schema";
-
-type ConversationContextTurn = Readonly<{
-  number: number;
-  question: string;
-  answer: string;
-  questionType: QuestionType;
-  isValid: boolean;
-}>;
+import {
+  assessStudentEnglishWithFallback,
+  transcribeStudentRecordingWithFallback,
+} from "./student-answer-provider-fallback";
+import type {
+  ConversationContextTurn,
+  StudentRecordingTranscription,
+} from "./student-answer-provider.types";
 
 export type CompletedAssessment = Readonly<{
-  assessment: Awaited<ReturnType<typeof assessStudentEnglish>>;
+  assessment: Awaited<ReturnType<typeof assessStudentEnglishWithFallback>>;
   transcript: string;
 }>;
 
@@ -33,7 +34,7 @@ export type StudentAssessmentResult =
   CompletedAssessment | PendingTranscription;
 
 function keepFollowUpOnFocus(
-  assessment: Awaited<ReturnType<typeof assessStudentEnglish>>,
+  assessment: Awaited<ReturnType<typeof assessStudentEnglishWithFallback>>,
   existingFocusTopic: string | null,
   fallbackQuestion: string,
   previousQuestions: ReadonlyArray<string>,
@@ -91,9 +92,13 @@ export async function completeStudentAssessment({
   const transcription = transcriptionJobId
     ? await getStudentRecordingTranscription(transcriptionJobId)
     : audioFile
-      ? await transcribeStudentRecording(
+      ? await transcribeStudentRecordingWithFallback(
           audioFile,
           audioDurationInSeconds ?? undefined,
+          {
+            transcribeWithOpenAi: transcribeStudentRecordingWithOpenAi,
+            transcribeWithSarvam: transcribeStudentRecording,
+          },
         )
       : null;
 
@@ -107,14 +112,20 @@ export async function completeStudentAssessment({
     throw new Error("We could not find an answer to assess.");
   }
 
-  const modelAssessment = await assessStudentEnglish({
-    pictureDescription,
-    transcript,
-    currentQuestion,
-    currentQuestionType,
-    focusTopic,
-    conversationContext,
-  });
+  const modelAssessment = await assessStudentEnglishWithFallback(
+    {
+      pictureDescription,
+      transcript,
+      currentQuestion,
+      currentQuestionType,
+      focusTopic,
+      conversationContext,
+    },
+    {
+      assessWithOpenAi: assessStudentEnglishWithOpenAi,
+      assessWithSarvam: assessStudentEnglish,
+    },
+  );
   const assessment = enforceEnglishOnlyResponse({
     assessment: modelAssessment,
     transcript,

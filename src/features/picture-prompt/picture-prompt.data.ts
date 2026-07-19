@@ -75,11 +75,17 @@ export const fallbackQuestionsByFilename: Readonly<
 };
 
 export function selectRandomPictureFilename(
-  excludedFilename?: PictureFilename,
+  excludedFilenames: ReadonlyArray<PictureFilename> = [],
 ) {
-  const availableFilenames = excludedFilename
-    ? pictureFilenames.filter((filename) => filename !== excludedFilename)
-    : pictureFilenames;
+  const unseenFilenames = pictureFilenames.filter(
+    (filename) => !excludedFilenames.includes(filename),
+  );
+  const availableFilenames =
+    unseenFilenames.length > 0
+      ? unseenFilenames
+      : pictureFilenames.filter(
+          (filename) => filename !== excludedFilenames.at(-1),
+        );
   const randomIndex = Math.floor(Math.random() * availableFilenames.length);
   return availableFilenames[randomIndex]!;
 }
