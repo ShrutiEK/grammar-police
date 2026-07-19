@@ -260,6 +260,10 @@ Implemented in the initial vertical slice:
 - [x] Validate exercise structure, allowed format, unique choices, target-skill alignment, unavailable context, answer leakage, length, and repetition.
 - [x] Generate adaptive exercises with OpenAI GPT-5.6 Terra using strict structured output and low-variance settings; keep Sarvam for unrelated application flows.
 - [x] Require the generator to independently verify the answer, distractors, and explanation before returning an exercise.
+- [x] Fall back to Gemini 2.5 Flash after OpenAI exhausts its adaptive-exercise retries, using the same prompt and validation rules.
+- [x] Rotate contexts across all supported learning skills and reject repeated lexical targets or recycled scenarios.
+- [x] Preserve recent exercise history across “Play again” so a new mission for the same skill receives a fresh question set.
+- [x] Use OpenAI’s Responses API with strict structured output as the primary exercise provider; Gemini remains optional fallback only.
 - [x] Retry invalid model output twice and include concrete validation feedback in regeneration requests.
 - [x] Provide explicit goals, misconceptions, formats, and examples for every text-practicable `LearningSkill`; pronunciation-only skills are blocked until an audio-aware activity exists.
 - [x] Require every choice in a multi-blank question to contain the same number of ordered, comma-separated answers as the prompt has blanks.

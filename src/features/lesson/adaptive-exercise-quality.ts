@@ -7,6 +7,7 @@ import {
   generatedAdaptiveExerciseSchema,
 } from "./adaptive-exercise.schema";
 import { getExerciseBlueprint } from "./exercise-blueprint";
+import { findExerciseDiversityProblem } from "./exercise-diversity";
 
 const unavailableContextPattern =
   /\b(?:picture|image|photo|illustration|shown above|shown below|this object|that object)\b/i;
@@ -86,6 +87,15 @@ export function parseExerciseForRequest(
         });
       }
 
+      const diversityProblem = findExerciseDiversityProblem(exercise, request);
+      if (diversityProblem) {
+        context.addIssue({
+          code: "custom",
+          message: diversityProblem,
+          path: ["prompt"],
+        });
+      }
+
       if (!isTargetSkillVisible(exercise, request.skill)) {
         context.addIssue({
           code: "custom",
@@ -97,8 +107,7 @@ export function parseExerciseForRequest(
       const correctChoice = exercise.choices[exercise.correctChoice];
       if (
         correctChoice &&
-        correctChoice.length >= 3 &&
-        normaliseText(exercise.prompt).includes(normaliseText(correctChoice))
+        doesPromptRevealAnswer(exercise.prompt, correctChoice)
       ) {
         context.addIssue({
           code: "custom",
@@ -108,6 +117,31 @@ export function parseExerciseForRequest(
       }
     })
     .parse(generatedExercise);
+}
+
+const reusableLanguageForms = new Set([
+  "a",
+  "am",
+  "an",
+  "and",
+  "are",
+  "because",
+  "but",
+  "is",
+  "so",
+  "the",
+]);
+
+function doesPromptRevealAnswer(prompt: string, correctChoice: string) {
+  const normalisedChoice = normaliseText(correctChoice);
+  if (
+    normalisedChoice.length < 3 ||
+    reusableLanguageForms.has(normalisedChoice)
+  ) {
+    return false;
+  }
+
+  return normaliseText(prompt).includes(normalisedChoice);
 }
 
 function calculateWordSimilarity(left: string, right: string) {

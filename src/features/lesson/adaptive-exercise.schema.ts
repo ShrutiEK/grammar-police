@@ -91,6 +91,9 @@ function normaliseChoice(choice: string) {
 
 export const practiceAttemptSchema = z.object({
   prompt: z.string().trim().min(1).max(300),
+  exerciseContent: z.string().trim().min(1).max(800).optional(),
+  correctAnswer: z.string().trim().min(1).max(160).optional(),
+  exerciseType: exerciseTypeSchema.optional(),
   difficulty: exerciseDifficultySchema,
   selectedChoice: z.string().trim().min(1).max(160),
   wasCorrect: z.boolean(),
