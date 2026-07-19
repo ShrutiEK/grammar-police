@@ -24,6 +24,12 @@ export function AssessmentResults({
   onShowFeedback,
 }: AssessmentResultsProperties) {
   const isBusy = pendingAction !== null;
+  const hasActions = isFinalQuestion || isCheckpoint;
+
+  if (!assessment.languageWarning && !hasActions) {
+    return null;
+  }
+
   const progressMessage =
     pendingAction === "feedback"
       ? "Looking across your conversation and preparing your feedback…"
@@ -48,83 +54,64 @@ export function AssessmentResults({
         </p>
       )}
 
-      <div className={assessment.languageWarning ? "mt-4" : ""}>
-        {isFinalQuestion ? (
-          <button
-            className="primary-button w-full cursor-pointer bg-support text-ink"
-            disabled={isBusy}
-            onClick={onShowFeedback}
-            type="button"
-          >
-            See my conversation feedback →
-          </button>
-        ) : isCheckpoint ? (
-          <div
-            className={`grid gap-2.5 ${canChangePicture ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
-          >
+      {hasActions && (
+        <div className={assessment.languageWarning ? "mt-4" : ""}>
+          {isFinalQuestion ? (
             <button
               className="primary-button w-full cursor-pointer bg-support text-ink"
-              disabled={isBusy}
-              onClick={onContinue}
-              type="button"
-            >
-              Keep talking →
-            </button>
-            {canChangePicture && (
-              <button
-                className="primary-button w-full cursor-pointer bg-surface text-ink"
-                disabled={isBusy}
-                onClick={onChangePicture}
-                type="button"
-              >
-                Change picture →
-              </button>
-            )}
-            <button
-              className="primary-button w-full cursor-pointer"
               disabled={isBusy}
               onClick={onShowFeedback}
               type="button"
             >
-              See my feedback →
+              See my conversation feedback →
             </button>
-          </div>
-        ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <button
-              className="primary-button w-full cursor-pointer"
-              disabled={isBusy}
-              onClick={onContinue}
-              type="button"
+          ) : (
+            <div
+              className={`grid gap-2.5 ${canChangePicture ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
             >
-              Continue conversation →
-            </button>
-            {canChangePicture && (
               <button
-                className="primary-button w-full cursor-pointer bg-surface text-ink"
+                className="primary-button w-full cursor-pointer bg-support text-ink"
                 disabled={isBusy}
-                onClick={onChangePicture}
+                onClick={onContinue}
                 type="button"
               >
-                Change picture →
+                Keep talking →
               </button>
-            )}
-          </div>
-        )}
+              {canChangePicture && (
+                <button
+                  className="primary-button w-full cursor-pointer bg-surface text-ink"
+                  disabled={isBusy}
+                  onClick={onChangePicture}
+                  type="button"
+                >
+                  Change picture →
+                </button>
+              )}
+              <button
+                className="primary-button w-full cursor-pointer"
+                disabled={isBusy}
+                onClick={onShowFeedback}
+                type="button"
+              >
+                See my feedback →
+              </button>
+            </div>
+          )}
 
-        {progressMessage && (
-          <p
-            className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-center text-base font-semibold text-ink"
-            role="status"
-          >
-            <span
-              aria-hidden="true"
-              className="inline-block size-2 animate-pulse rounded-full bg-eyebrow"
-            />
-            {progressMessage}
-          </p>
-        )}
-      </div>
+          {progressMessage && (
+            <p
+              className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-center text-base font-semibold text-ink"
+              role="status"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-block size-2 animate-pulse rounded-full bg-eyebrow"
+              />
+              {progressMessage}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }
