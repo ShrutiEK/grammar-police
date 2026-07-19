@@ -6,13 +6,13 @@ issues or pull requests.
 
 ## Milestone 0 — Align the prototype
 
-- [ ] Replace the fixed five-picture “roadmap” language with accurate prototype
+- [x] Replace the fixed five-picture “roadmap” language with accurate prototype
       language until AI-generated paths exist.
-- [ ] Fix picture metadata so image, alt text, learner instruction, and scene
+- [x] Fix picture metadata so image, alt text, learner instruction, and scene
       description describe the same scene.
 - [ ] Update environment documentation to use Sarvam consistently, or complete
       a deliberate provider migration.
-- [ ] Add a visible English-only note and enforce it in activity prompts and
+- [x] Add a visible English-only note and enforce it in activity prompts and
       assessments.
 - [ ] Define the learner age bands each activity supports and the content,
       reading-level, and safety adaptations required for each band.
@@ -23,9 +23,9 @@ issues or pull requests.
       curated inventory of visible subjects/actions.
 - [ ] Send the actual image to a vision-capable model, or use the curated scene
       inventory as the source of truth for feedback.
-- [ ] Store a multi-turn conversation session: learner utterance, detected
+- [x] Store a multi-turn conversation session: learner utterance, detected
       subject, AI follow-up, and learner reply.
-- [ ] Generate one relevant follow-up question from the subject the learner
+- [x] Generate one relevant follow-up question from the subject the learner
       chose, rather than hard-coding the conversation path.
 - [ ] Add schemas and tests for scene understanding, follow-up generation, and
       malformed provider responses.

@@ -1,54 +1,80 @@
+import type { StaticImageData } from "next/image";
+
+import {
+  pictureDescriptions,
+  type PictureFilename,
+} from "@/picture-descriptions/picture-descriptions.data";
+
 export type PicturePrompt = Readonly<{
-  imageUrl: string;
+  filename: PictureFilename;
+  imageUrl: StaticImageData;
   alt: string;
   title: string;
   instruction: string;
   description: string;
 }>;
 
-export const picturePrompts: PicturePrompt[] = [
-  {
-    imageUrl:
-      "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=85",
-    alt: "Friends watching a sunset",
-    title: "Picture Mission 1: The Sunset and Friendship",
-    instruction: "Describe what is happening in this soccer match.",
-    description: "Children playing football/soccer together on a grassy field.",
+const picturePromptMetadata: Readonly<
+  Record<PictureFilename, Pick<PicturePrompt, "alt" | "instruction" | "title">>
+> = {
+  "beach.png": {
+    alt: "People taking part in a community clean-up on a busy beach",
+    title: "The Beach Clean-up",
+    instruction: "Describe what is happening in this beach scene.",
   },
-  {
-    imageUrl:
-      "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=1200&q=85",
-    alt: "A student walking through the library",
-    title: "Picture Mission 2: The library",
-    instruction: "Describe your last visit to a library",
-    description:
-      "Students studying and reading books together in a classroom or library.",
+  "classroom.png": {
+    alt: "Children presenting experiments at a busy school science fair",
+    title: "The Science Fair",
+    instruction: "Describe what is happening at this science fair.",
   },
-  {
-    imageUrl:
-      "https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&w=1200&q=85",
-    alt: "Children drawing and painting on a large table",
-    title: "Picture Mission 3: Art Class",
-    instruction: "Describe the children making art.",
-    description:
-      "Children drawing, painting, and crafting together at a table in an art room.",
+  "market.png": {
+    alt: "Shoppers and vendors at a colourful open-air market",
+    title: "The Community Market",
+    instruction: "Describe what is happening in this market scene.",
   },
-  {
-    imageUrl:
-      "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1200&q=85",
-    alt: "A family having a picnic in a sunny park under a tree",
-    title: "Picture Mission 4: The Family Picnic",
-    instruction: "Describe what this family is doing in the park.",
-    description:
-      "A happy family having a picnic together on a grassy lawn in a sunny park under a tree.",
+  "picnic.png": {
+    alt: "Families and children enjoying different activities in a city park",
+    title: "The Park Picnic",
+    instruction: "Describe what is happening in this park scene.",
   },
-  {
-    imageUrl:
-      "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1200&q=85",
-    alt: "Children celebrating at a colorful birthday party",
-    title: "Picture Mission 5: The Birthday Party",
-    instruction: "Describe the birthday party scene.",
-    description:
-      "Children celebrating, wearing party hats, and playing with balloons at a colorful birthday party.",
+  "railway.png": {
+    alt: "A family reunion and travellers on a busy railway platform",
+    title: "The Railway Platform",
+    instruction: "Describe what is happening on this railway platform.",
   },
-];
+};
+
+export const pictureFilenames = Object.keys(
+  pictureDescriptions,
+) as PictureFilename[];
+
+export const picturePrompts = pictureFilenames.map((filename) => ({
+  filename,
+  imageUrl: pictureDescriptions[filename].image,
+  description: pictureDescriptions[filename].description,
+  ...picturePromptMetadata[filename],
+}));
+
+export const picturePromptsByFilename = Object.fromEntries(
+  picturePrompts.map((prompt) => [prompt.filename, prompt]),
+) as Readonly<Record<PictureFilename, PicturePrompt>>;
+
+export const fallbackQuestionsByFilename: Readonly<
+  Record<PictureFilename, string>
+> = {
+  "beach.png":
+    "Look at the foreground. What is the girl with the litter picker doing?",
+  "classroom.png":
+    "Look at the centre of the picture. What is happening to the model volcano?",
+  "market.png":
+    "Look at the produce stall. What is the vendor doing with the tomatoes?",
+  "picnic.png":
+    "Look at the foreground. What are the two children doing with the red kite?",
+  "railway.png":
+    "Look at the centre of the platform. What are the boy and the older man about to do?",
+};
+
+export function selectRandomPictureFilename() {
+  const randomIndex = Math.floor(Math.random() * pictureFilenames.length);
+  return pictureFilenames[randomIndex]!;
+}

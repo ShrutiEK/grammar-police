@@ -3,28 +3,43 @@ import { describe, expect, it } from "vitest";
 import { learnerAssessmentSchema } from "./assessment.schema";
 
 const validAssessment = {
-  grammar_score: 80,
-  vocabulary_score: 85,
-  communication_score: 90,
-  pronunciation_score: 75,
-  grammatical_errors: ["Missing article 'the' before 'children'."],
-  vocabulary_errors: [],
-  mastered_skills: ["Correctly identified children playing football."],
-  child_friendly_feedback:
-    "Great job describing the children playing football!",
+  scores: {
+    vocabulary: 4,
+    grammar: 3,
+    reasoning: 4,
+    sentenceComplexity: 3,
+    communication: 4,
+  },
+  feedback:
+    "You named the action clearly. Try joining your ideas with 'because'.",
+  languageWarning: false,
+  languageHint: "",
+  isGrounded: true,
+  isRelevantToFocus: true,
+  focusTopic: "the children flying the kite",
+  nextQuestion: "Why do you think the children enjoy flying the kite?",
 };
 
 describe("learnerAssessmentSchema", () => {
-  it("accepts a complete learner assessment", () => {
+  it("accepts a complete turn assessment", () => {
     expect(learnerAssessmentSchema.safeParse(validAssessment).success).toBe(
       true,
     );
   });
 
-  it("rejects an assessment missing feedback", () => {
+  it("rejects scores outside the 1 to 5 range", () => {
     const result = learnerAssessmentSchema.safeParse({
       ...validAssessment,
-      child_friendly_feedback: "",
+      scores: { ...validAssessment.scores, communication: 6 },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an assessment without a follow-up question", () => {
+    const result = learnerAssessmentSchema.safeParse({
+      ...validAssessment,
+      nextQuestion: "",
     });
 
     expect(result.success).toBe(false);

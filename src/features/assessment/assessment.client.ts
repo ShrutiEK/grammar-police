@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
+
 import {
   completedAssessmentResponseSchema,
   type AssessmentResult,
@@ -9,18 +11,43 @@ const assessmentErrorResponseSchema = z.object({
   error: z.string().trim().min(1),
 });
 
+type ConversationContextTurn = Readonly<{
+  number: number;
+  question: string;
+  answer: string;
+}>;
+
 type RequestAssessmentInput = Readonly<{
-  audioBlob: Blob;
-  pictureDescription: string;
+  audioBlob?: Blob;
+  writtenAnswer?: string;
+  pictureFilename: PictureFilename;
+  currentQuestion: string;
+  focusTopic: string | null;
+  conversationContext: ReadonlyArray<ConversationContextTurn>;
 }>;
 
 export async function requestStudentAssessment({
   audioBlob,
-  pictureDescription,
+  writtenAnswer,
+  pictureFilename,
+  currentQuestion,
+  focusTopic,
+  conversationContext,
 }: RequestAssessmentInput): Promise<AssessmentResult> {
   const formData = new FormData();
-  formData.append("audio", audioBlob, "student-recording.webm");
-  formData.append("pictureDescription", pictureDescription);
+
+  if (audioBlob) {
+    formData.append("audio", audioBlob, "student-recording.webm");
+  }
+
+  if (writtenAnswer?.trim()) {
+    formData.append("writtenAnswer", writtenAnswer.trim());
+  }
+
+  formData.append("pictureFilename", pictureFilename);
+  formData.append("currentQuestion", currentQuestion);
+  formData.append("focusTopic", focusTopic ?? "");
+  formData.append("conversationContext", JSON.stringify(conversationContext));
 
   const response = await fetch("/api/assessment", {
     body: formData,
@@ -33,7 +60,7 @@ export async function requestStudentAssessment({
     throw new Error(
       errorResponse.success
         ? errorResponse.data.error
-        : "We could not assess that recording. Please try again.",
+        : "We could not assess that answer. Please try again.",
     );
   }
 
