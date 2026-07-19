@@ -74,7 +74,12 @@ export const fallbackQuestionsByFilename: Readonly<
     "Look at the centre of the platform. What are the boy and the older man about to do?",
 };
 
-export function selectRandomPictureFilename() {
-  const randomIndex = Math.floor(Math.random() * pictureFilenames.length);
-  return pictureFilenames[randomIndex]!;
+export function selectRandomPictureFilename(
+  excludedFilename?: PictureFilename,
+) {
+  const availableFilenames = excludedFilename
+    ? pictureFilenames.filter((filename) => filename !== excludedFilename)
+    : pictureFilenames;
+  const randomIndex = Math.floor(Math.random() * availableFilenames.length);
+  return availableFilenames[randomIndex]!;
 }

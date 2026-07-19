@@ -4,6 +4,7 @@ type PictureConversationResultsProperties = Readonly<{
   assessment: PictureConversationAssessment;
   canContinueConversation?: boolean;
   nextConversationPrompt?: string;
+  pictureCount?: number;
   onContinueConversation: () => void;
   onContinueLearning: () => void;
   onStartNewAssessment: () => void;
@@ -31,6 +32,7 @@ export function PictureConversationResults({
   assessment,
   canContinueConversation = true,
   nextConversationPrompt,
+  pictureCount = 1,
   onContinueConversation,
   onContinueLearning,
   onStartNewAssessment,
@@ -54,6 +56,11 @@ export function PictureConversationResults({
           A great conversation! 🌟
         </h2>
         <p className="mt-3 text-muted">{assessment.learnerSummary}</p>
+        {pictureCount > 1 && (
+          <p className="mt-2 text-sm font-semibold text-eyebrow">
+            Cumulative result from {pictureCount} pictures
+          </p>
+        )}
       </header>
 
       <section aria-labelledby="skill-snapshot-heading">

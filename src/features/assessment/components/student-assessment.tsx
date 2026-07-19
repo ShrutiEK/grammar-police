@@ -11,7 +11,14 @@ import type { PictureFilename } from "@/picture-descriptions/picture-description
 
 import { requestStudentAssessment } from "../assessment.client";
 import { logAssessmentProgress } from "../assessment-progress-log";
+import { createCumulativePictureAssessment } from "../cumulative-picture-assessment";
 import { createPictureConversationInput } from "../create-picture-conversation-input";
+import {
+  archivePictureAssessment,
+  loadPictureAssessmentHistory,
+  mergePictureAssessmentAttempts,
+  type PictureAssessmentAttempt,
+} from "../picture-assessment-history";
 import { requestPictureConversationFeedback } from "../picture-conversation.client";
 import {
   loadPictureConversationFeedback,
@@ -50,6 +57,14 @@ export function StudentAssessment({
   const [feedback, setFeedback] = useState<PictureConversationFeedback | null>(
     null,
   );
+  const [assessmentHistory, setAssessmentHistory] = useState<
+    PictureAssessmentAttempt[]
+  >(() =>
+    typeof window === "undefined" ? [] : loadPictureAssessmentHistory(),
+  );
+  const [learningHandoffMessage, setLearningHandoffMessage] = useState<
+    string | null
+  >(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTranscribingLongRecording, setIsTranscribingLongRecording] =
     useState(false);
@@ -83,6 +98,22 @@ export function StudentAssessment({
     setWrittenAnswer("");
     reset();
     logAssessmentProgress("new assessment ready");
+  }
+
+  function archiveCurrentAssessment() {
+    if (!feedback) {
+      return assessmentHistory;
+    }
+
+    return archivePictureAssessment({
+      feedback,
+      input: createPictureConversationInput(session),
+    });
+  }
+
+  function startNewPicture() {
+    setAssessmentHistory(archiveCurrentAssessment());
+    resetAssessment();
   }
 
   function continueToNextQuestion() {
@@ -186,11 +217,16 @@ export function StudentAssessment({
 
     try {
       const conversationContext = session.questionsAndAnswers
-        .filter((turn) => turn.answer !== null)
+        .filter((turn) => turn.answer !== null && turn.assessment !== null)
         .map((turn) => ({
           number: turn.number,
           question: turn.question,
           answer: turn.answer!,
+          questionType: turn.questionType ?? "picture_follow_up",
+          isValid:
+            turn.assessment!.isGrounded &&
+            turn.assessment!.isRelevantToFocus &&
+            !turn.assessment!.languageWarning,
         }));
       const result = await requestStudentAssessment(
         {
@@ -200,6 +236,7 @@ export function StudentAssessment({
           writtenAnswer: answerMode === "written" ? writtenAnswer : undefined,
           pictureFilename: session.selectedPictureFilename,
           currentQuestion: currentTurn.question,
+          currentQuestionType: currentTurn.questionType ?? "picture_follow_up",
           focusTopic: session.focusTopic,
           conversationContext,
         },
@@ -243,15 +280,30 @@ export function StudentAssessment({
   }
 
   if (feedback) {
+    const currentAttempt = {
+      feedback,
+      input: createPictureConversationInput(session),
+    } satisfies PictureAssessmentAttempt;
+    const cumulativeAttempts = mergePictureAssessmentAttempts([
+      ...assessmentHistory,
+      currentAttempt,
+    ]);
+    const cumulativeAssessment =
+      createCumulativePictureAssessment(cumulativeAttempts);
+
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
         <section className="mx-auto max-w-4xl space-y-4">
           <PictureConversationResults
-            assessment={feedback.assessment}
+            assessment={cumulativeAssessment}
             canContinueConversation={
               session.questionsAndAnswers.length < MAX_QUESTIONS
             }
-            nextConversationPrompt={feedback.nextConversationPrompt}
+            nextConversationPrompt={
+              currentTurn.assessment?.nextQuestion ||
+              feedback.nextConversationPrompt
+            }
+            pictureCount={cumulativeAttempts.length}
             onContinueConversation={() => {
               setFeedback(null);
               continueToNextQuestion();
@@ -265,8 +317,12 @@ export function StudentAssessment({
                   "We couldn’t prepare your lesson from this feedback. Please try again.",
                 );
               }
+              archiveCurrentAssessment();
+              setLearningHandoffMessage(
+                "Your cumulative feedback is saved and ready for the learning activity to use.",
+              );
             }}
-            onStartNewAssessment={resetAssessment}
+            onStartNewAssessment={startNewPicture}
           />
           {assessmentError && (
             <p
