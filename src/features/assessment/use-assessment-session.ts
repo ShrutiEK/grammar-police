@@ -138,9 +138,13 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
   }, []);
 
   const resetSession = useCallback(() => {
-    const nextSession = createInitialSession(selectRandomPictureFilename());
-    setSession(nextSession);
-    saveSession(nextSession);
+    setSession((currentSession) => {
+      const nextSession = createInitialSession(
+        selectRandomPictureFilename(currentSession.selectedPictureFilename),
+      );
+      saveSession(nextSession);
+      return nextSession;
+    });
   }, []);
 
   return {

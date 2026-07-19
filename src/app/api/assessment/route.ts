@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { completeStudentAssessment } from "@/features/assessment/assessment.service";
 import { pictureFilenameSchema } from "@/features/assessment/assessment-session.schema";
+import { questionTypeSchema } from "@/features/assessment/assessment.schema";
 import { fallbackQuestionsByFilename } from "@/features/picture-prompt/picture-prompt.data";
 import { pictureDescriptions } from "@/picture-descriptions/picture-descriptions.data";
 
@@ -14,6 +15,8 @@ const conversationContextSchema = z
       number: z.number().int().min(1).max(8),
       question: z.string().trim().min(1).max(500),
       answer: z.string().trim().min(1).max(5000),
+      questionType: questionTypeSchema,
+      isValid: z.boolean(),
     }),
   )
   .max(7);
@@ -59,6 +62,9 @@ export async function POST(request: Request) {
       getTextField(formData, "pictureFilename"),
     );
     const currentQuestion = getTextField(formData, "currentQuestion");
+    const currentQuestionType = questionTypeSchema.safeParse(
+      getTextField(formData, "currentQuestionType"),
+    );
     const focusTopic = getTextField(formData, "focusTopic") || null;
     const conversationContext = parseConversationContext(
       getTextField(formData, "conversationContext"),
@@ -115,6 +121,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!currentQuestionType.success) {
+      return NextResponse.json(
+        { error: "The assessment question type is invalid." },
+        { status: 400 },
+      );
+    }
+
     if (!conversationContext.success) {
       return NextResponse.json(
         { error: "The conversation history is invalid." },
@@ -130,6 +143,7 @@ export async function POST(request: Request) {
       pictureDescription: pictureDescriptions[pictureFilename.data].description,
       fallbackQuestion: fallbackQuestionsByFilename[pictureFilename.data],
       currentQuestion,
+      currentQuestionType: currentQuestionType.data,
       focusTopic,
       conversationContext: conversationContext.data,
     });

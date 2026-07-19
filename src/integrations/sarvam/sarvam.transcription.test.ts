@@ -66,7 +66,16 @@ describe("Sarvam batch transcription", () => {
     expect(sarvam.requestSarvam).toHaveBeenNthCalledWith(
       1,
       "/speech-to-text/job/v1",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        body: JSON.stringify({
+          job_parameters: {
+            language_code: "unknown",
+            mode: "codemix",
+            model: "saaras:v3",
+          },
+        }),
+        method: "POST",
+      }),
     );
     expect(sarvam.requestSarvam).toHaveBeenNthCalledWith(
       2,
@@ -82,6 +91,30 @@ describe("Sarvam batch transcription", () => {
       "https://storage.example.test/student-recording.webm",
       expect.objectContaining({ method: "PUT" }),
     );
+  });
+
+  it("preserves mixed-language speech in short recordings", async () => {
+    sarvam.requestSarvam.mockImplementationOnce(
+      async (_path: string, init: RequestInit) => {
+        const body = init.body as FormData;
+
+        expect(body.get("language_code")).toBe("unknown");
+        expect(body.get("mode")).toBe("codemix");
+        expect(body.get("model")).toBe("saaras:v3");
+
+        return jsonResponse({ transcript: "यह a beautiful park है।" });
+      },
+    );
+
+    await expect(
+      transcribeStudentRecording(
+        new File(["recording"], "answer.webm", { type: "audio/webm" }),
+        10,
+      ),
+    ).resolves.toEqual({
+      status: "completed",
+      transcript: "यह a beautiful park है।",
+    });
   });
 
   it("returns the downloaded transcript after a batch job completes", async () => {

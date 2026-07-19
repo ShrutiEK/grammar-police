@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { learnerAssessmentSchema } from "@/features/assessment/assessment.schema";
+import type { QuestionType } from "@/features/assessment/assessment.schema";
 import { createAssessmentPrompt } from "@/prompts/assessment/create-assessment-prompt";
 
 import { requestSarvam } from "./sarvam.client";
@@ -49,12 +50,15 @@ type ConversationContextTurn = Readonly<{
   number: number;
   question: string;
   answer: string;
+  questionType: QuestionType;
+  isValid: boolean;
 }>;
 
 type AssessStudentEnglishInput = Readonly<{
   pictureDescription: string;
   transcript: string;
   currentQuestion: string;
+  currentQuestionType: QuestionType;
   focusTopic: string | null;
   conversationContext: ReadonlyArray<ConversationContextTurn>;
 }>;

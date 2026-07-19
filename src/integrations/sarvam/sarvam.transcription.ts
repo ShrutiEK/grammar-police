@@ -47,6 +47,9 @@ const batchDownloadUrlsSchema = z.object({
 const batchJobIdSchema = z.string().trim().min(1).max(200);
 
 const synchronousMaximumDurationInSeconds = 30;
+const transcriptionLanguageCode = "unknown";
+const transcriptionMode = "codemix";
+const transcriptionModel = "saaras:v3";
 
 export type StudentRecordingTranscription =
   | Readonly<{
@@ -129,9 +132,9 @@ async function startBatchTranscription(audioFile: File) {
   const filename = getRecordingFilename(mimeType);
   const jobBody = await requestSarvamJson("/speech-to-text/job/v1", {
     job_parameters: {
-      language_code: "en-IN",
-      mode: "transcribe",
-      model: "saaras:v3",
+      language_code: transcriptionLanguageCode,
+      mode: transcriptionMode,
+      model: transcriptionModel,
     },
   });
   const job = batchJobCreatedSchema.parse(jobBody);
@@ -159,9 +162,11 @@ async function transcribeShortRecording(audioFile: File) {
   const { audioBlob, mimeType } = getCleanAudio(audioFile);
 
   requestBody.append("file", audioBlob, getRecordingFilename(mimeType));
-  requestBody.append("language_code", "en-IN");
-  requestBody.append("mode", "transcribe");
-  requestBody.append("model", "saaras:v3");
+  // Detect language switches without translating the learner's words. Hindi
+  // remains in Devanagari and English remains English in the same transcript.
+  requestBody.append("language_code", transcriptionLanguageCode);
+  requestBody.append("mode", transcriptionMode);
+  requestBody.append("model", transcriptionModel);
 
   const response = await requestSarvam("/speech-to-text", {
     body: requestBody,

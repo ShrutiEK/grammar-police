@@ -9,11 +9,14 @@ import {
 
 import { enforceEnglishOnlyResponse } from "./english-only";
 import { selectFollowUpQuestion } from "./follow-up-question";
+import type { QuestionType } from "./assessment.schema";
 
 type ConversationContextTurn = Readonly<{
   number: number;
   question: string;
   answer: string;
+  questionType: QuestionType;
+  isValid: boolean;
 }>;
 
 export type CompletedAssessment = Readonly<{
@@ -34,6 +37,7 @@ function keepFollowUpOnFocus(
   existingFocusTopic: string | null,
   fallbackQuestion: string,
   previousQuestions: ReadonlyArray<string>,
+  hasEstablishedPersonalExperience: boolean,
 ) {
   const lockedFocusTopic =
     existingFocusTopic || (assessment.isGrounded ? assessment.focusTopic : "");
@@ -47,6 +51,14 @@ function keepFollowUpOnFocus(
       focusTopic: lockedFocusTopic,
       previousQuestions,
       sceneFallbackQuestion: fallbackQuestion,
+      allowVisualQuestion:
+        !assessment.isGrounded || !assessment.isRelevantToFocus,
+      forceConversationProgression:
+        Boolean(lockedFocusTopic) &&
+        assessment.isGrounded &&
+        assessment.isRelevantToFocus &&
+        !assessment.languageWarning,
+      hasEstablishedPersonalExperience,
     }),
   };
 }
@@ -59,6 +71,7 @@ type CompleteAssessmentInput = Readonly<{
   pictureDescription: string;
   fallbackQuestion: string;
   currentQuestion: string;
+  currentQuestionType: QuestionType;
   focusTopic: string | null;
   conversationContext: ReadonlyArray<ConversationContextTurn>;
 }>;
@@ -71,6 +84,7 @@ export async function completeStudentAssessment({
   pictureDescription,
   fallbackQuestion,
   currentQuestion,
+  currentQuestionType,
   focusTopic,
   conversationContext,
 }: CompleteAssessmentInput): Promise<StudentAssessmentResult> {
@@ -97,6 +111,7 @@ export async function completeStudentAssessment({
     pictureDescription,
     transcript,
     currentQuestion,
+    currentQuestionType,
     focusTopic,
     conversationContext,
   });
@@ -108,10 +123,19 @@ export async function completeStudentAssessment({
   });
 
   return {
-    assessment: keepFollowUpOnFocus(assessment, focusTopic, fallbackQuestion, [
-      ...conversationContext.map((turn) => turn.question),
-      currentQuestion,
-    ]),
+    assessment: keepFollowUpOnFocus(
+      assessment,
+      focusTopic,
+      fallbackQuestion,
+      [...conversationContext.map((turn) => turn.question), currentQuestion],
+      conversationContext.some(
+        (turn) => turn.questionType === "personal_follow_up" && turn.isValid,
+      ) ||
+        (currentQuestionType === "personal_follow_up" &&
+          assessment.isGrounded &&
+          assessment.isRelevantToFocus &&
+          !assessment.languageWarning),
+    ),
     transcript,
   };
 }

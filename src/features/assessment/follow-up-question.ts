@@ -104,37 +104,146 @@ function isRelatedToFocus(question: string, focusTopic: string) {
   );
 }
 
-function createTopicFallbacks(focusTopic: string): QuestionCandidate[] {
+function isVisualInspectionQuestion(question: string) {
+  if (
+    /\b(have you|your (?:own )?(?:experience|memory|opinion)|how would you feel|remind you|what would you|advice|learn from)\b/i.test(
+      question,
+    )
+  ) {
+    return false;
+  }
+
+  return /\b(in (?:the|this) picture|visible|look (?:at|again)|foreground|background|nearby|what (?:is|are) .+ doing|describe .+(?:detail|interaction)|what might happen next with)\b/i.test(
+    question,
+  );
+}
+
+function dependsOnEstablishedExperience(question: string) {
+  return /\b(that|this|your) experience\b|\bwhat happened next\b|\bat the time\b|\bmemorable for you\b|\bwho was with you\b/i.test(
+    question,
+  );
+}
+
+function createConversationLadder(
+  focusTopic: string,
+  hasEstablishedPersonalExperience: boolean,
+): QuestionCandidate[] {
+  if (hasEstablishedPersonalExperience) {
+    return [
+      {
+        nextQuestion: "What happened next in that experience?",
+        nextQuestionType: "personal_follow_up",
+      },
+      {
+        nextQuestion: "How did you feel during that experience, and why?",
+        nextQuestionType: "personal_follow_up",
+      },
+      {
+        nextQuestion: "What made that experience memorable for you?",
+        nextQuestionType: "personal_follow_up",
+      },
+      {
+        nextQuestion:
+          "How was your experience similar to or different from the situation that started our conversation?",
+        nextQuestionType: "personal_follow_up",
+      },
+      {
+        nextQuestion: "What did you learn from that experience?",
+        nextQuestionType: "personal_follow_up",
+      },
+      {
+        nextQuestion:
+          "What advice would you give someone in a similar situation?",
+        nextQuestionType: "personal_follow_up",
+      },
+    ];
+  }
+
   return [
     {
-      nextQuestion: `What visible detail about ${focusTopic} have you not described yet?`,
-      nextQuestionType: "picture_follow_up",
-    },
-    {
-      nextQuestion: `What do you think is happening with ${focusTopic}, and why?`,
-      nextQuestionType: "picture_follow_up",
-    },
-    {
-      nextQuestion: `What might happen next with ${focusTopic}?`,
-      nextQuestionType: "picture_follow_up",
-    },
-    {
-      nextQuestion: `Where is ${focusTopic} in the picture, and what is nearby?`,
-      nextQuestionType: "picture_follow_up",
-    },
-    {
-      nextQuestion: `How would you describe ${focusTopic} to someone who cannot see the picture?`,
-      nextQuestionType: "picture_follow_up",
-    },
-    {
-      nextQuestion: `What does ${focusTopic} make you think or feel?`,
+      nextQuestion: `Does ${focusTopic} remind you of a similar experience from your own life? Tell me about it.`,
       nextQuestionType: "personal_follow_up",
     },
     {
-      nextQuestion: `Have you seen something like ${focusTopic} before? Tell me about it.`,
+      nextQuestion: `If you were involved in ${focusTopic}, how would you feel, and why?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `Have you ever seen or experienced something similar to ${focusTopic}? What happened?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `Why do you think a situation involving ${focusTopic} could be memorable?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `How might different people react to ${focusTopic}?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `What could someone learn from a situation involving ${focusTopic}?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `What advice would you give someone involved in ${focusTopic}?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `Would you like to experience something similar to ${focusTopic}? Why or why not?`,
       nextQuestionType: "personal_follow_up",
     },
   ];
+}
+
+function createCorrectivePictureQuestions(
+  focusTopic: string,
+  sceneFallbackQuestion: string,
+): QuestionCandidate[] {
+  if (!focusTopic) {
+    return [
+      {
+        nextQuestion: sceneFallbackQuestion,
+        nextQuestionType: "picture_follow_up",
+      },
+      {
+        nextQuestion:
+          "Let’s return to the picture. What is one clear action you can see?",
+        nextQuestionType: "picture_follow_up",
+      },
+      {
+        nextQuestion:
+          "Let’s return to the picture. Name one person or object you can clearly see.",
+        nextQuestionType: "picture_follow_up",
+      },
+    ];
+  }
+
+  return [
+    {
+      nextQuestion: `Let’s return to the picture. What is happening with ${focusTopic}?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `Look again at ${focusTopic}. What clear detail supports your answer?`,
+      nextQuestionType: "picture_follow_up",
+    },
+  ];
+}
+
+function findUnusedCandidate(
+  candidates: ReadonlyArray<QuestionCandidate>,
+  previousQuestions: ReadonlyArray<string>,
+  preferredStartIndex = 0,
+) {
+  const orderedCandidates = [
+    ...candidates.slice(preferredStartIndex),
+    ...candidates.slice(0, preferredStartIndex),
+  ];
+
+  return orderedCandidates.find(
+    (candidate) =>
+      !wasQuestionAlreadyAsked(candidate.nextQuestion, previousQuestions),
+  );
 }
 
 type SelectFollowUpQuestionInput = Readonly<{
@@ -143,6 +252,9 @@ type SelectFollowUpQuestionInput = Readonly<{
   focusTopic: string;
   previousQuestions: ReadonlyArray<string>;
   sceneFallbackQuestion: string;
+  allowVisualQuestion: boolean;
+  forceConversationProgression: boolean;
+  hasEstablishedPersonalExperience: boolean;
 }>;
 
 export function selectFollowUpQuestion({
@@ -151,52 +263,52 @@ export function selectFollowUpQuestion({
   focusTopic,
   previousQuestions,
   sceneFallbackQuestion,
+  allowVisualQuestion,
+  forceConversationProgression,
+  hasEstablishedPersonalExperience,
 }: SelectFollowUpQuestionInput): QuestionCandidate {
   const modelQuestionIsNew = !wasQuestionAlreadyAsked(
     modelQuestion,
     previousQuestions,
   );
-
-  if (
+  const modelQuestionIsAllowed =
     modelQuestionIsNew &&
-    (!focusTopic || isRelatedToFocus(modelQuestion, focusTopic))
-  ) {
+    (!focusTopic || isRelatedToFocus(modelQuestion, focusTopic)) &&
+    (allowVisualQuestion || modelQuestionType === "personal_follow_up") &&
+    (!forceConversationProgression ||
+      (modelQuestionType === "personal_follow_up" &&
+        !isVisualInspectionQuestion(modelQuestion) &&
+        (hasEstablishedPersonalExperience ||
+          !dependsOnEstablishedExperience(modelQuestion))));
+
+  if (modelQuestionIsAllowed) {
     return {
       nextQuestion: modelQuestion,
       nextQuestionType: modelQuestionType,
     };
   }
 
-  const fallbackCandidates: QuestionCandidate[] = focusTopic
-    ? createTopicFallbacks(focusTopic)
-    : [
-        {
-          nextQuestion: sceneFallbackQuestion,
-          nextQuestionType: "picture_follow_up",
-        },
-        {
-          nextQuestion:
-            "Choose one real person in the picture. What are they doing?",
-          nextQuestionType: "picture_follow_up",
-        },
-        {
-          nextQuestion:
-            "Choose one visible activity that you have not mentioned yet and describe it.",
-          nextQuestionType: "picture_follow_up",
-        },
-        {
-          nextQuestion:
-            "What is one real detail in the foreground that you have not described?",
-          nextQuestionType: "picture_follow_up",
-        },
-      ];
+  if (forceConversationProgression && focusTopic) {
+    const conversationLadder = createConversationLadder(
+      focusTopic,
+      hasEstablishedPersonalExperience,
+    );
+
+    return (
+      findUnusedCandidate(conversationLadder, previousQuestions) ?? {
+        nextQuestion:
+          "Is there another experience or viewpoint you would like to share about this topic?",
+        nextQuestionType: "personal_follow_up",
+      }
+    );
+  }
 
   return (
-    fallbackCandidates.find(
-      (candidate) =>
-        !wasQuestionAlreadyAsked(candidate.nextQuestion, previousQuestions),
+    findUnusedCandidate(
+      createCorrectivePictureQuestions(focusTopic, sceneFallbackQuestion),
+      previousQuestions,
     ) ?? {
-      nextQuestion: `What new detail can you add to answer question ${previousQuestions.length + 1}?`,
+      nextQuestion: sceneFallbackQuestion,
       nextQuestionType: "picture_follow_up",
     }
   );

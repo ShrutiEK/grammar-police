@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
+import type { QuestionType } from "./assessment.schema";
 import {
   studentAssessmentResponseSchema,
   type AssessmentResult,
@@ -16,6 +17,8 @@ type ConversationContextTurn = Readonly<{
   number: number;
   question: string;
   answer: string;
+  questionType: QuestionType;
+  isValid: boolean;
 }>;
 
 type RequestAssessmentInput = Readonly<{
@@ -25,6 +28,7 @@ type RequestAssessmentInput = Readonly<{
   writtenAnswer?: string;
   pictureFilename: PictureFilename;
   currentQuestion: string;
+  currentQuestionType: QuestionType;
   focusTopic: string | null;
   conversationContext: ReadonlyArray<ConversationContextTurn>;
 }>;
@@ -45,6 +49,7 @@ async function requestAssessmentOnce({
   writtenAnswer,
   pictureFilename,
   currentQuestion,
+  currentQuestionType,
   focusTopic,
   conversationContext,
 }: RequestAssessmentInput): Promise<
@@ -70,6 +75,7 @@ async function requestAssessmentOnce({
 
   formData.append("pictureFilename", pictureFilename);
   formData.append("currentQuestion", currentQuestion);
+  formData.append("currentQuestionType", currentQuestionType);
   formData.append("focusTopic", focusTopic ?? "");
   formData.append("conversationContext", JSON.stringify(conversationContext));
 
