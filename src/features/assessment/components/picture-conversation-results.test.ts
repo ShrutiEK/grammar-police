@@ -190,7 +190,7 @@ describe("PictureConversationResults", () => {
     );
 
     expect(markup).toContain("No single learning gap stood out");
-    expect(markup).toContain("No gaps stood out here today.");
+    expect(markup).not.toContain("To grow");
     expect(markup).not.toContain("Try your next challenge");
   });
 });

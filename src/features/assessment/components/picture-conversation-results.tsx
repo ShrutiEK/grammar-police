@@ -34,12 +34,7 @@ function MetricGrowth({
   metric,
 }: Readonly<{ metric: PictureConversationAssessment["metrics"][number] }>) {
   if (metric.findingStatus === "no_gap") {
-    return (
-      <p className="text-base leading-relaxed text-muted">
-        <span className="font-bold text-ink">Keep it up: </span>
-        No gaps stood out here today.
-      </p>
-    );
+    return null;
   }
 
   const evidence = metric.evidence[0];

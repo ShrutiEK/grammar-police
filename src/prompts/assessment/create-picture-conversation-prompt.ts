@@ -123,6 +123,7 @@ Every field is required.
 - For every assessed result, fill evidenceQuote, evidenceTurn, observation, and strength, and set unavailableReason to an empty string.
 - evidenceQuote must be a short exact quote from the learner.
 - observation and strength must be kind, specific, and no more than 20 words each.
+- Speak to the learner directly using "you". Never use the third person, "the learner", "the student", or a name.
 - Do not treat non-English content as weak English.
 - Assess observable communication only, never personality or intelligence.
 - Keep all generated text in English and age-neutral.

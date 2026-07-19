@@ -34,6 +34,13 @@ describe("picture conversation assessment prompt", () => {
     );
   });
 
+  it("requires learner-facing feedback in the second person", () => {
+    const prompt = createPictureConversationPrompt("grammar", spokenInput);
+
+    expect(prompt).toContain('Speak to the learner directly using "you"');
+    expect(prompt).toContain("Never use the third person");
+  });
+
   it("allows a typed unmapped finding without routing an unrelated skill", () => {
     const prompt = createPictureConversationPrompt("grammar", spokenInput);
 
