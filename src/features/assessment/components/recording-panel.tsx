@@ -22,6 +22,7 @@ type RecordingPanelProperties = Readonly<{
   onStopRecording: () => void;
   onSubmitWrittenAnswer: () => void;
   onWrittenAnswerChange: (answer: string) => void;
+  conversationMode?: "picture" | "pari";
 }>;
 
 export function RecordingPanel({
@@ -41,6 +42,7 @@ export function RecordingPanel({
   onStopRecording,
   onSubmitWrittenAnswer,
   onWrittenAnswerChange,
+  conversationMode = "picture",
 }: RecordingPanelProperties) {
   const [answerMode, setAnswerMode] = useState<"spoken" | "written">("spoken");
   const hasWrittenAnswer = writtenAnswer.trim().length > 0;
@@ -182,7 +184,11 @@ export function RecordingPanel({
                   onChange={(event) =>
                     onWrittenAnswerChange(event.target.value)
                   }
-                  placeholder="Start with the detail that caught your eye…"
+                  placeholder={
+                    conversationMode === "pari"
+                      ? "Share your answer with Pari…"
+                      : "Start with the detail that caught your eye…"
+                  }
                   value={writtenAnswer}
                 />
                 <p

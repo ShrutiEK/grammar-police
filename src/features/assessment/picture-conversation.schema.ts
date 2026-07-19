@@ -374,6 +374,10 @@ export type PictureConversationAssessment = z.infer<
 >;
 
 export const pictureConversationInputSchema = z.object({
+  conversationMode: z.enum(["picture", "pari"]).optional(),
+  pariTopicId: z
+    .enum(["movies", "stories", "hobbies", "daily-life"])
+    .optional(),
   pictureFilename: z.enum([
     "beach.png",
     "classroom.png",
@@ -389,6 +393,7 @@ export type PictureConversationInput = z.infer<
 >;
 
 export type PictureConversationAssessmentInput = Readonly<{
+  conversationMode?: "picture" | "pari";
   pictureDescription: string;
   turns: readonly PictureConversationTurn[];
 }>;
@@ -426,6 +431,22 @@ export const pictureConversationStreamEventSchema = z.discriminatedUnion(
 export type PictureConversationFeedback = z.infer<
   typeof pictureConversationFeedbackSchema
 >;
+
+// Conversation-keyed feedback cache (key = stringified normalized input).
+export const feedbackCacheSchema = z.record(
+  z.string(),
+  pictureConversationFeedbackSchema,
+);
+
+// One archived assessment attempt, and the capped cross-picture history.
+export const pictureAssessmentAttemptSchema = z.object({
+  feedback: pictureConversationFeedbackSchema,
+  input: pictureConversationInputSchema,
+});
+
+export const pictureAssessmentHistorySchema = pictureAssessmentAttemptSchema
+  .array()
+  .max(20);
 
 export type PictureConversationResponse = z.infer<
   typeof pictureConversationResponseSchema

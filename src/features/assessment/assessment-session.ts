@@ -1,5 +1,9 @@
 import type { PictureFilename } from "../../picture-descriptions/picture-descriptions.data";
 import type { AssessmentSession } from "./assessment-session.schema";
+import {
+  getPariConversationTopic,
+  type PariConversationTopicId,
+} from "./pari-conversation.data";
 
 const initialQuestion = "Can you describe what you see in this picture?";
 
@@ -12,6 +16,8 @@ export function createInitialAssessmentSession(
   viewedPictureFilenames: PictureFilename[] = [selectedPictureFilename],
 ): AssessmentSession {
   return {
+    conversationMode: "picture",
+    pariTopicId: null,
     selectedPictureFilename,
     focusTopic: null,
     previousPictureSessions,
@@ -26,6 +32,32 @@ export function createInitialAssessmentSession(
         assessment: null,
       },
     ],
+  };
+}
+
+export function createPariAssessmentSession(
+  currentSession: AssessmentSession,
+  topicId: PariConversationTopicId,
+): AssessmentSession {
+  const topic = getPariConversationTopic(topicId);
+
+  return {
+    ...currentSession,
+    conversationMode: "pari",
+    pariTopicId: topicId,
+    focusTopic: topic.label,
+    questionsAndAnswers: [
+      {
+        number: 1,
+        question: topic.openingQuestion,
+        questionType: "personal_follow_up",
+        answer: null,
+        answerMode: null,
+        assessment: null,
+      },
+    ],
+    previousPictureSessions: [],
+    viewedPictureFilenames: [currentSession.selectedPictureFilename],
   };
 }
 

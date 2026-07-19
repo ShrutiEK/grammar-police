@@ -75,6 +75,8 @@ type CompleteAssessmentInput = Readonly<{
   currentQuestionType: QuestionType;
   focusTopic: string | null;
   conversationContext: ReadonlyArray<ConversationContextTurn>;
+  conversationMode: "picture" | "pari";
+  conversationTopic: string | null;
 }>;
 
 export async function completeStudentAssessment({
@@ -88,6 +90,8 @@ export async function completeStudentAssessment({
   currentQuestionType,
   focusTopic,
   conversationContext,
+  conversationMode,
+  conversationTopic,
 }: CompleteAssessmentInput): Promise<StudentAssessmentResult> {
   const transcription = transcriptionJobId
     ? await getStudentRecordingTranscription(transcriptionJobId)
@@ -120,6 +124,8 @@ export async function completeStudentAssessment({
       currentQuestionType,
       focusTopic,
       conversationContext,
+      conversationMode,
+      conversationTopic,
     },
     {
       assessWithOpenAi: assessStudentEnglishWithOpenAi,
@@ -136,7 +142,7 @@ export async function completeStudentAssessment({
   return {
     assessment: keepFollowUpOnFocus(
       assessment,
-      focusTopic,
+      conversationMode === "pari" ? conversationTopic : focusTopic,
       fallbackQuestion,
       [...conversationContext.map((turn) => turn.question), currentQuestion],
       conversationContext.some(

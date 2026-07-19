@@ -1,20 +1,9 @@
-import { z } from "zod";
-
 import {
-  pictureConversationFeedbackSchema,
-  pictureConversationInputSchema,
+  pictureAssessmentAttemptSchema,
+  pictureAssessmentHistorySchema,
   type PictureConversationFeedback,
   type PictureConversationInput,
 } from "./picture-conversation.schema";
-
-const pictureAssessmentAttemptSchema = z.object({
-  feedback: pictureConversationFeedbackSchema,
-  input: pictureConversationInputSchema,
-});
-
-const pictureAssessmentHistorySchema = pictureAssessmentAttemptSchema
-  .array()
-  .max(20);
 
 export type PictureAssessmentAttempt = Readonly<{
   feedback: PictureConversationFeedback;
@@ -107,4 +96,15 @@ export function archivePictureAssessment(
   );
 
   return nextHistory;
+}
+
+/** Overwrite local history with a (de-duped, capped) list — used when merging
+ * the Redis copy into the localStorage mirror on load. */
+export function savePictureAssessmentHistory(
+  history: ReadonlyArray<PictureAssessmentAttempt>,
+  storage: Storage = localStorage,
+): PictureAssessmentAttempt[] {
+  const merged = mergePictureAssessmentAttempts(history);
+  storage.setItem(pictureAssessmentHistoryStorageKey, JSON.stringify(merged));
+  return merged;
 }

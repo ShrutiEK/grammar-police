@@ -34,6 +34,7 @@ export async function assessSubmittedPictureConversation(
   });
   const assessment = await assessPictureConversationMetricsIndividually(
     {
+      conversationMode: input.conversationMode,
       pictureDescription,
       turns: input.turns,
     },

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { completeStudentAssessment } from "@/features/assessment/assessment.service";
 import { pictureFilenameSchema } from "@/features/assessment/assessment-session.schema";
 import { questionTypeSchema } from "@/features/assessment/assessment.schema";
+import { pariConversationTopics } from "@/features/assessment/pari-conversation.data";
 import { fallbackQuestionsByFilename } from "@/features/picture-prompt/picture-prompt.data";
 import { pictureDescriptions } from "@/picture-descriptions/picture-descriptions.data";
 
@@ -61,6 +62,13 @@ export async function POST(request: Request) {
     const pictureFilename = pictureFilenameSchema.safeParse(
       getTextField(formData, "pictureFilename"),
     );
+    const conversationMode = z
+      .enum(["picture", "pari"])
+      .safeParse(getTextField(formData, "conversationMode") || "picture");
+    const conversationTopic = getTextField(formData, "conversationTopic");
+    const isKnownPariTopic = pariConversationTopics.some(
+      (topic) => topic.label === conversationTopic,
+    );
     const currentQuestion = getTextField(formData, "currentQuestion");
     const currentQuestionType = questionTypeSchema.safeParse(
       getTextField(formData, "currentQuestionType"),
@@ -113,6 +121,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (
+      !conversationMode.success ||
+      (conversationMode.data === "pari" && !isKnownPariTopic)
+    ) {
+      return NextResponse.json(
+        { error: "Please choose a topic before starting your conversation." },
+        { status: 400 },
+      );
+    }
+
     if (!currentQuestion || currentQuestion.length > 500) {
       return NextResponse.json(
         { error: "We couldn’t read the current prompt. Please try again." },
@@ -145,6 +163,8 @@ export async function POST(request: Request) {
       currentQuestionType: currentQuestionType.data,
       focusTopic,
       conversationContext: conversationContext.data,
+      conversationMode: conversationMode.data,
+      conversationTopic: conversationTopic || null,
     });
 
     return NextResponse.json(result);

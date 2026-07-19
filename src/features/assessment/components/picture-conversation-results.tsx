@@ -15,6 +15,7 @@ type PictureConversationResultsProperties = Readonly<{
   onContinueConversation: () => void;
   onContinueLearning: () => void;
   onStartNewAssessment: () => void;
+  conversationMode?: "picture" | "pari";
 }>;
 
 const metricLabel = {
@@ -84,11 +85,16 @@ export function PictureConversationResults({
   onContinueConversation,
   onContinueLearning,
   onStartNewAssessment,
+  conversationMode = "picture",
 }: PictureConversationResultsProperties) {
   const metricAppliesToConversation = (
     metric: PictureConversationAssessment["metrics"][number],
   ) => {
     if (metric.id === "pronunciation") {
+      return false;
+    }
+
+    if (metric.id === "scene_understanding" && conversationMode === "pari") {
       return false;
     }
 
@@ -234,7 +240,7 @@ export function PictureConversationResults({
             No single learning gap stood out
           </p>
           <p className="mt-2 text-lg text-muted">
-            Try another picture when you are ready to share more English.
+            Start another conversation when you are ready to share more English.
           </p>
         </div>
       )}
@@ -252,7 +258,9 @@ export function PictureConversationResults({
             onClick={onContinueConversation}
             type="button"
           >
-            Keep talking about this picture →
+            {conversationMode === "pari"
+              ? "Keep chatting with Pari →"
+              : "Keep talking about this picture →"}
           </button>
         )}
         {canStartNewPicture && (
@@ -261,7 +269,9 @@ export function PictureConversationResults({
             onClick={onStartNewAssessment}
             type="button"
           >
-            Try a new picture →
+            {conversationMode === "pari"
+              ? "Start a new conversation →"
+              : "Try a new picture →"}
           </button>
         )}
         {assessment.primaryRecommendation && (

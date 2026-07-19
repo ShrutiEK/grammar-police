@@ -142,6 +142,10 @@ function getUnavailableReason(
     return "Answer a personal follow-up so we can understand conversation skills.";
   }
 
+  if (metricId === "scene_understanding" && input.conversationMode === "pari") {
+    return "This conversation did not use a picture.";
+  }
+
   return "We need another example to understand this part of your English.";
 }
 

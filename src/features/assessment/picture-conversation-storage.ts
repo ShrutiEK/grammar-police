@@ -1,4 +1,5 @@
 import {
+  feedbackCacheSchema,
   pictureConversationFeedbackSchema,
   pictureConversationInputSchema,
   type PictureConversationFeedback,
@@ -12,10 +13,20 @@ const pictureConversationFeedbackCacheStorageKey =
 const latestFeedbackIsBoundStorageKey =
   "grammar_police_picture_conversation_feedback_is_bound";
 
-const feedbackCacheSchema = z.record(
-  z.string(),
-  pictureConversationFeedbackSchema,
-);
+/** The cache was unbounded; cap it so a single Redis value / request stays small. */
+export const FEEDBACK_CACHE_LIMIT = 50;
+
+export function capFeedbackCache(
+  cache: Record<string, PictureConversationFeedback>,
+  limit = FEEDBACK_CACHE_LIMIT,
+): Record<string, PictureConversationFeedback> {
+  const entries = Object.entries(cache);
+  if (entries.length <= limit) {
+    return cache;
+  }
+  // String keys preserve insertion order, so this keeps the most recent entries.
+  return Object.fromEntries(entries.slice(entries.length - limit));
+}
 
 function getStoredFeedback(storage: Storage) {
   const storedFeedback = storage.getItem(pictureConversationFeedbackStorageKey);
@@ -81,17 +92,20 @@ function saveLatestPictureConversationFeedback(
 export function savePictureConversationFeedback(
   input: PictureConversationInput,
   feedback: PictureConversationFeedback,
-) {
+): Record<string, PictureConversationFeedback> {
   const cacheKey = getConversationCacheKey(input);
   const feedbackCache = getFeedbackCache(localStorage);
 
   feedbackCache[cacheKey] = feedback;
+  const cappedCache = capFeedbackCache(feedbackCache);
   localStorage.setItem(
     pictureConversationFeedbackCacheStorageKey,
-    JSON.stringify(feedbackCache),
+    JSON.stringify(cappedCache),
   );
   saveLatestPictureConversationFeedback(feedback);
   localStorage.setItem(latestFeedbackIsBoundStorageKey, "true");
+  // Returned so the sync layer can push the updated cache to Redis.
+  return cappedCache;
 }
 
 export function loadPictureConversationFeedback() {
@@ -140,4 +154,35 @@ export function loadPictureConversationFeedbackForInput(
   savePictureConversationFeedback(input, legacyFeedback);
   return legacyFeedback;
 }
-import { z } from "zod";
+
+// Helpers used by the Redis sync layer to hydrate a device that has no local
+// feedback yet (e.g. a returning learner on a new browser).
+
+export function readLatestFeedback(storage: Storage = localStorage) {
+  return getStoredFeedback(storage);
+}
+
+export function readFeedbackCache(storage: Storage = localStorage) {
+  return getFeedbackCache(storage);
+}
+
+export function writeLatestFeedback(
+  feedback: PictureConversationFeedback,
+  storage: Storage = localStorage,
+) {
+  storage.setItem(
+    pictureConversationFeedbackStorageKey,
+    JSON.stringify(feedback),
+  );
+  storage.setItem(latestFeedbackIsBoundStorageKey, "true");
+}
+
+export function writeFeedbackCache(
+  cache: Record<string, PictureConversationFeedback>,
+  storage: Storage = localStorage,
+) {
+  storage.setItem(
+    pictureConversationFeedbackCacheStorageKey,
+    JSON.stringify(capFeedbackCache(cache)),
+  );
+}

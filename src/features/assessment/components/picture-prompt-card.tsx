@@ -7,6 +7,7 @@ type PicturePromptCardProperties = Readonly<{
   isChangeDisabled?: boolean;
   isChangingPicture?: boolean;
   onChangePicture?: () => void;
+  onDmWithPari?: () => void;
   prompt: PicturePrompt;
 }>;
 
@@ -15,6 +16,7 @@ export function PicturePromptCard({
   isChangeDisabled = false,
   isChangingPicture = false,
   onChangePicture,
+  onDmWithPari,
   prompt,
 }: PicturePromptCardProperties) {
   return (
@@ -37,6 +39,15 @@ export function PicturePromptCard({
           Speak about the picture
         </h1>
         <p className="mt-1 text-base text-muted">{prompt.instruction}</p>
+        {onDmWithPari && (
+          <button
+            className="mt-3 min-h-12 rounded-full border-2 border-ink bg-surface px-5 py-2 font-bold text-ink"
+            onClick={onDmWithPari}
+            type="button"
+          >
+            Can’t use the picture? DM with Pari
+          </button>
+        )}
       </header>
       <div className="p-3 sm:p-4">
         <Image
