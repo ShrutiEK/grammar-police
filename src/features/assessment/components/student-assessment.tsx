@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { saveLessonAssessment } from "@/features/lesson/lesson-assessment-storage";
 import { picturePromptsByFilename } from "@/features/picture-prompt/picture-prompt.data";
 import { useAudioRecorder } from "@/features/recording/use-audio-recorder";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
@@ -39,6 +41,7 @@ type StudentAssessmentProperties = Readonly<{
 export function StudentAssessment({
   initialPictureFilename,
 }: StudentAssessmentProperties) {
+  const router = useRouter();
   const { recording, recordingState, startRecording, stopRecording, reset } =
     useAudioRecorder();
   const { session, recordResult, advanceToNextQuestion, resetSession } =
@@ -47,9 +50,6 @@ export function StudentAssessment({
   const [feedback, setFeedback] = useState<PictureConversationFeedback | null>(
     null,
   );
-  const [learningHandoffMessage, setLearningHandoffMessage] = useState<
-    string | null
-  >(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTranscribingLongRecording, setIsTranscribingLongRecording] =
     useState(false);
@@ -78,7 +78,6 @@ export function StudentAssessment({
     resetSession();
     setAssessmentError(null);
     setFeedback(null);
-    setLearningHandoffMessage(null);
     setIsTranscribingLongRecording(false);
     setPendingCtaAction(null);
     setWrittenAnswer("");
@@ -258,15 +257,23 @@ export function StudentAssessment({
               continueToNextQuestion();
             }}
             onContinueLearning={() => {
-              setLearningHandoffMessage(
-                "Your full feedback is ready for the learning activity to use.",
-              );
+              try {
+                saveLessonAssessment(feedback.assessment);
+                router.push("/lesson");
+              } catch {
+                setAssessmentError(
+                  "We couldn’t prepare your lesson from this feedback. Please try again.",
+                );
+              }
             }}
             onStartNewAssessment={resetAssessment}
           />
-          {learningHandoffMessage && (
-            <p className="rounded-2xl border-2 border-ink bg-[#f0fffb] p-5 text-muted">
-              {learningHandoffMessage}
+          {assessmentError && (
+            <p
+              className="rounded-2xl border-2 border-[#b96a00] bg-[#fff5dc] p-5 text-ink"
+              role="alert"
+            >
+              {assessmentError}
             </p>
           )}
         </section>
