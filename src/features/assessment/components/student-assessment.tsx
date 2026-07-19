@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -281,7 +280,7 @@ export function StudentAssessment({
       setAssessmentError(
         error instanceof Error
           ? error.message
-          : "We could not assess that answer. Please try again.",
+          : "We couldn’t check that answer. Try sharing it again.",
       );
     } finally {
       setIsAnalyzing(false);
@@ -306,7 +305,7 @@ export function StudentAssessment({
 
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
-        <section className="mx-auto max-w-4xl space-y-4">
+        <section className="mx-auto max-w-6xl space-y-6">
           <PictureConversationResults
             assessment={cumulativeAssessment}
             canContinueConversation={
@@ -338,14 +337,14 @@ export function StudentAssessment({
               }
               archiveCurrentAssessment();
               setLearningHandoffMessage(
-                "Your cumulative feedback is saved and ready for the learning activity to use.",
+                "Your next challenge will use what came through in these conversations.",
               );
             }}
             onStartNewAssessment={startNewPicture}
           />
           {assessmentError && (
             <p
-              className="rounded-2xl border-2 border-[#b96a00] bg-[#fff5dc] p-5 text-ink"
+              className="rounded-2xl border-2 border-eyebrow bg-accent-soft p-5 text-ink"
               role="alert"
             >
               {assessmentError}
@@ -359,14 +358,8 @@ export function StudentAssessment({
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
       <section className="mx-auto max-w-6xl space-y-4">
-        <header className="flex items-center justify-between">
-          <Link
-            className="text-sm font-bold text-eyebrow underline-offset-4 hover:underline"
-            href="/"
-          >
-            ← Back to home
-          </Link>
-          <p className="rounded-full border border-ink/20 bg-white/80 px-3 py-1 text-xs font-bold text-muted">
+        <header className="flex justify-end">
+          <p className="rounded-full border border-ink/20 bg-surface px-3 py-1 text-base font-bold text-muted">
             English only
           </p>
         </header>

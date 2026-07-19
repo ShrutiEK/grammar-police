@@ -40,7 +40,7 @@ describe("PictureConversationResults", () => {
     expect(markup).toContain(
       "Audio-aware pronunciation feedback is on the way.",
     );
-    expect(markup).toContain("0 of 6 observed");
+    expect(markup).toContain("Enough examples for 0 of 6 areas");
   });
 
   it("shows spelling feedback instead of pronunciation for written answers", () => {
@@ -72,10 +72,10 @@ describe("PictureConversationResults", () => {
     expect(markup).toContain("Spelling and writing");
     expect(markup).not.toContain("Pronunciation");
     expect(markup).not.toContain("Speaking flow");
-    expect(markup).toContain("0 of 6 observed");
+    expect(markup).toContain("Enough examples for 0 of 6 areas");
   });
 
-  it("labels a learning map combined from multiple pictures", () => {
+  it("labels feedback combined from multiple pictures", () => {
     const markup = renderToStaticMarkup(
       createElement(PictureConversationResults, {
         assessment: {
@@ -103,7 +103,7 @@ describe("PictureConversationResults", () => {
       }),
     );
 
-    expect(markup).toContain("Cumulative result from 2 pictures");
+    expect(markup).toContain("Highlights from 2 pictures");
     expect(markup).toContain("Tell me about a similar experience.");
   });
 });

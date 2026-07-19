@@ -102,7 +102,7 @@ const focusedLessons: Partial<Record<LearningSkill, LessonContent>> = {
         correctChoice: 1,
         hint: "Listen to the first sound in ‘orange’. Love vowels?",
         successMessage:
-          "Correct — ‘orange’ begins with a vowel sound, so use ‘an’.",
+          "Nice choice — ‘orange’ begins with a vowel sound, so use ‘an’.",
       },
       {
         id: "article-2",
@@ -151,7 +151,8 @@ const focusedLessons: Partial<Record<LearningSkill, LessonContent>> = {
         choices: ["is", "am", "are"],
         correctChoice: 1,
         hint: "Which helper verb travels with ‘I’?",
-        successMessage: "Correct — ‘I am looking’ describes the action now.",
+        successMessage:
+          "Nice choice — ‘I am looking’ describes the action now.",
       },
     ],
   },
@@ -209,7 +210,7 @@ const focusedLessons: Partial<Record<LearningSkill, LessonContent>> = {
         choices: ["because", "so", "and"],
         correctChoice: 1,
         hint: "The shade is the result.",
-        successMessage: "Correct — ‘so’ links the cause to its result.",
+        successMessage: "Nice choice — ‘so’ links the cause to its result.",
       },
       {
         id: "connector-3",

@@ -140,13 +140,13 @@ export function LessonMission({
           </div>
           <p className="section-eyebrow mt-5">Mission complete</p>
           <h1 className="text-4xl font-extrabold" id="completion-title">
-            {missionPassed ? "Superpower unlocked!" : "Your skill is growing!"}
+            {missionPassed ? "Great work!" : "You’re building confidence!"}
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-muted">
             You solved {score} of {EXERCISES_PER_MISSION} challenges about{" "}
             {lesson.skillLabel}.
             {missionPassed
-              ? " Use this skill in your next picture description."
+              ? " Use this speaking tool in your next picture description."
               : " Try once more—the hints will help the pattern stick."}
           </p>
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
@@ -158,8 +158,8 @@ export function LessonMission({
               Play again
             </button>
             <Link
-              className="primary-button inline-flex items-center justify-center bg-support no-underline"
-              href="/assessment"
+              className="primary-button inline-flex items-center justify-center bg-support text-ink no-underline"
+              href="/"
             >
               Try it while speaking
             </Link>
@@ -171,36 +171,36 @@ export function LessonMission({
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_12%_14%,var(--color-accent-soft)_0,transparent_25%),radial-gradient(circle_at_88%_76%,var(--color-support)_0,transparent_31%)] px-5 py-8 sm:px-8">
-      <div className="mx-auto max-w-3xl space-y-5">
+      <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex items-center justify-between gap-4">
           <Link
-            className="text-sm font-bold text-eyebrow hover:underline"
-            href="/assessment"
+            className="inline-flex min-h-11 items-center text-base font-bold text-eyebrow hover:underline"
+            href="/"
           >
-            ← Assessment
+            ← Picture conversation
           </Link>
-          <p className="rounded-full border-2 border-ink bg-white px-4 py-2 text-sm font-bold">
-            Challenge {attemptCount + 1} of {EXERCISES_PER_MISSION} · Level{" "}
+          <p className="rounded-full border-2 border-ink bg-surface px-4 py-2 text-base font-bold">
+            Challenge {attemptCount + 1} of {EXERCISES_PER_MISSION} · Step{" "}
             {difficulty} · ⭐ {score}
           </p>
         </header>
 
         {isDemo && (
           <section
-            className="rounded-xl border-2 border-dashed border-ink bg-white p-4"
+            className="rounded-xl border-2 border-dashed border-ink bg-surface p-5"
             aria-label="Temporary lesson mocks"
           >
-            <p className="text-sm font-bold text-ink">
-              🧪 Temporary test metrics
+            <p className="text-base font-bold text-ink">
+              🧪 Temporary demo options
             </p>
-            <p className="mt-1 text-xs text-muted">
-              Choose a weakness to rebuild the lesson. Remove this panel after
-              evaluator integration.
+            <p className="mt-1 text-base text-muted">
+              Choose an area to preview a different challenge. Remove this panel
+              after evaluator integration.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {Object.entries(mockOptions).map(([mockKey, label]) => (
                 <button
-                  className="cursor-pointer rounded-full border-2 border-ink bg-canvas px-3 py-2 text-xs font-bold hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  className="min-h-12 cursor-pointer rounded-full border-2 border-ink bg-canvas px-4 py-2 text-base font-bold hover:-translate-y-0.5 hover:bg-accent-soft"
                   key={mockKey}
                   onClick={() => onSelectMock(mockKey)}
                   type="button"
@@ -213,69 +213,72 @@ export function LessonMission({
         )}
 
         <section
-          className="overflow-hidden rounded-[2rem] border-[3px] border-ink bg-white shadow-card"
+          className="overflow-hidden rounded-[2rem] border-[3px] border-ink bg-surface shadow-card"
           aria-labelledby="mission-title"
         >
-          <div className="bg-[#6c5ce7] px-6 py-6 text-white sm:px-8">
-            <p className="text-xs font-bold tracking-[0.18em] uppercase">
+          <div className="bg-[#4938a8] px-6 py-6 text-white sm:px-8">
+            <p className="text-lg font-bold tracking-wide">
               Your highest-impact mission
             </p>
             <h1 className="mt-2 text-4xl font-extrabold" id="mission-title">
               {lesson.missionTitle}
             </h1>
             <p className="mt-2 text-white/90">
-              Today’s one skill: {lesson.skillLabel}
+              Today’s focus: {lesson.skillLabel}
             </p>
           </div>
 
           <div className="space-y-6 p-6 sm:p-8">
-            <details className="rounded-2xl border-2 border-ink bg-[#f3f0ff] p-4">
+            <details className="rounded-2xl border-2 border-ink bg-accent-soft p-4">
               <summary className="cursor-pointer font-bold">
                 Why this mission?
               </summary>
               <p className="mt-3 text-muted">{lesson.reason}</p>
-              <p className="mt-2 border-l-4 border-[#6c5ce7] pl-3 text-sm italic text-muted">
+              <p className="mt-3 border-l-4 border-eyebrow pl-3 text-base italic text-muted">
                 Your words: “{lesson.learnerEvidence}”
               </p>
             </details>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border-2 border-ink bg-accent-soft p-4">
-                <p className="text-xs font-bold uppercase">Quick power-up</p>
-                <p className="mt-2 text-sm leading-relaxed">
+                <p className="text-lg font-bold">Quick power-up</p>
+                <p className="mt-2 text-base leading-relaxed">
                   {lesson.teachingTip}
                 </p>
               </div>
               <div className="rounded-2xl border-2 border-ink bg-support p-4">
-                <p className="text-xs font-bold uppercase">See the upgrade</p>
-                <p className="mt-2 text-sm leading-relaxed">{lesson.example}</p>
+                <p className="text-lg font-bold">See the upgrade</p>
+                <p className="mt-2 text-base leading-relaxed">
+                  {lesson.example}
+                </p>
               </div>
             </div>
 
             <div aria-live="polite">
-              <p className="text-sm font-bold text-[#6c5ce7]">
-                AI challenge · Difficulty {difficulty} of 5
+              <p className="text-base font-bold text-eyebrow">
+                Your challenge · Step {difficulty} of 5
               </p>
               {isLoading && (
                 <div
-                  className="mt-4 rounded-2xl border-2 border-ink bg-[#f3f0ff] p-6 text-center"
+                  className="mt-4 rounded-2xl border-2 border-ink bg-accent-soft p-6 text-center"
                   role="status"
                 >
                   <p className="font-bold">✨ Building your next challenge…</p>
-                  <p className="mt-1 text-sm text-muted">
-                    The AI is creating fresh practice at level{" "}
-                    {practiceState.difficulty}.
+                  <p className="mt-1 text-base text-muted">
+                    Creating fresh practice for step {practiceState.difficulty}.
                   </p>
                 </div>
               )}
 
               {lessonError && !isLoading && (
                 <div
-                  className="mt-4 rounded-2xl border-2 border-ink bg-[#ffe3e0] p-4"
+                  className="mt-4 rounded-2xl border-2 border-danger bg-canvas p-4"
                   role="alert"
                 >
-                  <p className="font-bold">We could not load the exercise.</p>
-                  <p className="mt-1 text-sm text-muted">{lessonError}</p>
+                  <p className="font-bold">
+                    We couldn’t load the next challenge.
+                  </p>
+                  <p className="mt-1 text-base text-muted">{lessonError}</p>
                   <button
                     className="primary-button mt-4 cursor-pointer"
                     onClick={() =>
@@ -296,7 +299,7 @@ export function LessonMission({
                       const wasSelected = selectedChoice === choiceIndex;
                       return (
                         <button
-                          className={`min-h-14 cursor-pointer rounded-2xl border-2 border-ink px-5 py-3 text-left font-semibold transition-transform hover:-translate-y-0.5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ink ${wasSelected ? (wasCorrect ? "bg-support" : "bg-[#ffe3e0]") : "bg-white"}`}
+                          className={`min-h-14 cursor-pointer rounded-2xl border-2 border-ink px-5 py-3 text-left text-lg font-semibold transition-transform hover:-translate-y-0.5 ${wasSelected ? (wasCorrect ? "bg-support" : "bg-accent-soft") : "bg-surface"}`}
                           disabled={wasCorrect !== null}
                           key={choice}
                           onClick={() => chooseAnswer(choiceIndex)}
@@ -313,20 +316,20 @@ export function LessonMission({
 
                   {feedback && (
                     <div
-                      className={`mt-4 rounded-2xl border-2 border-ink p-4 ${wasCorrect ? "bg-support" : "bg-[#fff5dc]"}`}
+                      className={`mt-4 rounded-2xl border-2 border-ink p-4 ${wasCorrect ? "bg-support" : "bg-accent-soft"}`}
                       role="status"
                     >
                       <p className="font-bold">
-                        {wasCorrect ? "✅ Nice work!" : "💡 Keep this level"}
+                        {wasCorrect ? "✅ Nice work!" : "💡 Let’s try another"}
                       </p>
-                      <p className="mt-1 text-sm text-muted">{feedback}</p>
-                      <p className="mt-2 text-sm font-semibold">
+                      <p className="mt-1 text-base text-muted">{feedback}</p>
+                      <p className="mt-2 text-base font-semibold">
                         {wasCorrect
-                          ? `Correct—the next challenge moves to level ${practiceState.difficulty}.`
-                          : `Not yet—the next challenge stays at level ${practiceState.difficulty}.`}
+                          ? `Nice—the next challenge moves to step ${practiceState.difficulty}.`
+                          : `Keep going—the next challenge stays at step ${practiceState.difficulty}.`}
                       </p>
                       {wasCorrect !== null && (
-                        <p className="mt-2 text-sm text-muted">
+                        <p className="mt-2 text-base text-muted">
                           {exercise.explanation}
                         </p>
                       )}
@@ -340,10 +343,10 @@ export function LessonMission({
                       type="button"
                     >
                       {attemptCount === EXERCISES_PER_MISSION - 1
-                        ? "See my result"
+                        ? "See how I did"
                         : wasCorrect
-                          ? `Try level ${practiceState.difficulty} →`
-                          : `More practice at level ${practiceState.difficulty} →`}
+                          ? `Try step ${practiceState.difficulty} →`
+                          : `More practice at step ${practiceState.difficulty} →`}
                     </button>
                   )}
                 </>

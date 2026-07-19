@@ -49,30 +49,30 @@ export function RecordingPanel({
       aria-labelledby={
         feedbackProgress ? "feedback-progress-title" : "recording-panel-title"
       }
-      className="flex flex-col justify-between rounded-2xl border-2 border-ink bg-white p-4 shadow-[5px_5px_0_#17213d] sm:rounded-3xl sm:p-5"
+      className="flex flex-col justify-between rounded-2xl border-2 border-ink bg-surface p-4 shadow-[5px_5px_0_#17213d] sm:rounded-3xl sm:p-5"
     >
       {feedbackProgress ? (
         <FeedbackProgress progress={feedbackProgress} />
       ) : (
         <>
           <div>
-            <p className="section-eyebrow mb-2 text-xs">
-              Question {questionNumber} of 8
-            </p>
+            <p className="section-eyebrow mb-2">Prompt {questionNumber} of 8</p>
             <h2
               className="text-xl leading-snug font-bold text-ink sm:text-2xl"
               id="recording-panel-title"
             >
               {question}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Answer in English by speaking or writing. Complete sentences help
-              us understand your communication skills.
+            <p className="mt-2 text-base leading-relaxed text-muted">
+              Speak or write in English. Complete sentences help us understand
+              your ideas.
             </p>
 
             <div className="mt-4 flex flex-col items-center text-center">
               <button
+                aria-describedby="recording-status"
                 aria-label={isRecording ? "Stop recording" : "Start recording"}
+                aria-pressed={isRecording}
                 className={`grid size-16 place-items-center rounded-full border-2 border-ink text-2xl shadow-[4px_4px_0_#17213d] transition-all enabled:hover:-translate-y-1 enabled:active:translate-y-0 disabled:cursor-wait sm:size-18 ${
                   isRecording
                     ? "animate-bounce bg-[#ff8b7b]"
@@ -88,18 +88,24 @@ export function RecordingPanel({
               </button>
               <p
                 aria-live="polite"
-                className="mt-3 min-h-8 text-xs leading-relaxed font-semibold text-muted sm:text-sm"
+                className="mt-3 min-h-8 text-base leading-relaxed font-semibold text-muted"
+                id="recording-status"
               >
-                {hasResult ? "Your answer has been assessed." : statusMessage}
+                {hasResult ? "Your feedback is ready." : statusMessage}
               </p>
             </div>
 
             {recording && (
-              <div className="mt-3 rounded-xl border-2 border-support bg-[#f0fffb] p-3">
-                <p className="text-xs font-bold text-ink">
+              <div className="mt-3 rounded-xl border-2 border-support bg-canvas p-3">
+                <p
+                  className="text-base font-bold text-ink"
+                  id="recording-summary"
+                >
                   Recording saved · {recording.durationInSeconds} seconds
                 </p>
                 <audio
+                  aria-describedby="recording-summary"
+                  aria-label="Review your recorded answer"
                   className="mt-2 h-9 w-full"
                   controls
                   src={recording.audioUrl}
@@ -110,9 +116,7 @@ export function RecordingPanel({
             {!recording && (
               <div className="my-3 flex items-center gap-3" aria-hidden="true">
                 <span className="h-px flex-1 bg-ink/20" />
-                <span className="text-xs font-bold text-muted uppercase">
-                  or write
-                </span>
+                <span className="text-base font-bold text-muted">or write</span>
                 <span className="h-px flex-1 bg-ink/20" />
               </div>
             )}
@@ -120,57 +124,67 @@ export function RecordingPanel({
             {!recording && (
               <div>
                 <label
-                  className="text-sm font-bold text-ink"
+                  className="text-base font-bold text-ink"
                   htmlFor="written-answer"
                 >
                   Your answer
                 </label>
                 <textarea
-                  className="mt-1.5 min-h-20 w-full resize-y rounded-xl border-2 border-ink bg-canvas p-3 text-sm text-ink outline-none focus:ring-4 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-65 sm:min-h-24"
+                  aria-describedby="written-answer-help"
+                  className="mt-1.5 min-h-24 w-full resize-y rounded-xl border-2 border-ink bg-canvas p-3 text-base text-ink focus:ring-4 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-65"
                   disabled={isAnalyzing || hasResult || isRecording}
                   id="written-answer"
                   maxLength={5000}
                   onChange={(event) =>
                     onWrittenAnswerChange(event.target.value)
                   }
-                  placeholder="Type your answer in English…"
+                  placeholder="For example: I can see people playing in a park."
                   value={writtenAnswer}
                 />
+                <p
+                  className="mt-2 text-base text-muted"
+                  id="written-answer-help"
+                >
+                  Use complete English sentences. Maximum 5,000 characters.
+                </p>
               </div>
             )}
           </div>
 
           {recording && !hasResult && (
             <button
+              aria-busy={isAnalyzing}
+              aria-describedby="recording-status"
               className="primary-button mt-4 w-full cursor-pointer"
               disabled={isAnalyzing}
               onClick={onAnalyzeRecording}
               type="button"
             >
               {isTranscribingLongRecording
-                ? "Transcribing your recording…"
+                ? "Turning your recording into words…"
                 : isAnalyzing
-                  ? "Analyzing your English…"
-                  : "Submit spoken answer"}
+                  ? "Putting your feedback together…"
+                  : "Share my recording"}
             </button>
           )}
 
           {!recording && !hasResult && (
             <button
+              aria-busy={isAnalyzing}
               className="primary-button mt-4 w-full cursor-pointer"
               disabled={isAnalyzing || !hasWrittenAnswer}
               onClick={onSubmitWrittenAnswer}
               type="button"
             >
               {isAnalyzing
-                ? "Analyzing your English…"
-                : "Submit written answer"}
+                ? "Putting your feedback together…"
+                : "Share my answer"}
             </button>
           )}
 
           {assessmentError && (
             <p
-              className="mt-4 rounded-xl border-2 border-[#ff8b7b] bg-[#fff0ed] p-3 text-sm font-semibold text-ink"
+              className="mt-4 rounded-xl border-2 border-danger bg-canvas p-3 text-base font-semibold text-ink"
               role="alert"
             >
               {assessmentError}

@@ -25,31 +25,31 @@ function getProgressCopy(progress: PictureConversationProgress) {
     case "reading":
       return {
         description:
-          "Gathering your answers and finding the skills we have enough evidence to understand.",
+          "Gathering your answers and finding the areas where we have enough examples to help.",
         heading: "Reading your conversation…",
       };
     case "calculating":
       return {
         description:
           completedCount === 0
-            ? `We found ${progress.totalMetrics} areas to look at. Each one is checked separately so your feedback stays specific.`
-            : "Your ready insights are shown below while we continue checking the rest.",
+            ? `We found ${progress.totalMetrics} areas to explore. We look at each one separately so your feedback stays useful.`
+            : "Your ready highlights are shown below while we look at the rest.",
         heading:
           completedCount === 0
-            ? `Calculating ${progress.totalMetrics} learning insights…`
-            : `${completedCount}/${progress.totalMetrics} insights calculated`,
+            ? `Exploring ${progress.totalMetrics} areas…`
+            : `${completedCount} of ${progress.totalMetrics} highlights ready`,
       };
     case "retrying":
       return {
         description:
-          "One check paused, so we’re safely checking your conversation another way. Your answers are saved.",
-        heading: "Double-checking your answers…",
+          "One step paused, so we’re preparing your feedback another way. Your answers are safe.",
+        heading: "Preparing your feedback another way…",
       };
     case "summarizing":
       return {
         description:
-          "Connecting your strengths, examples, and most useful next skill into one clear learning map.",
-        heading: "Summarizing your learning map…",
+          "Bringing your strengths, examples, and most useful next step together.",
+        heading: "Finishing your feedback…",
       };
   }
 }
@@ -150,10 +150,10 @@ export function FeedbackProgress({ progress }: FeedbackProgressProperties) {
                 : ""
             }
           >
-            Calculate insights
+            Find highlights
           </li>
           <li className={progress.stage === "summarizing" ? "text-ink" : ""}>
-            Summarize
+            Finish feedback
           </li>
         </ol>
       </div>

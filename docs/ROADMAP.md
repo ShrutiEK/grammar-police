@@ -6,6 +6,10 @@ issues or pull requests.
 
 ## Milestone 0 — Align the prototype
 
+- [x] Open the picture conversation directly from the home route; keep the old
+      `/assessment` URL as a compatibility redirect.
+- [x] Replace test-like learner-facing terminology using the staged
+      [learner copy refresh plan](LEARNER_COPY_REFRESH_PLAN.md).
 - [x] Replace the fixed five-picture “roadmap” language with accurate prototype
       language until AI-generated paths exist.
 - [x] Fix picture metadata so image, alt text, learner instruction, and scene

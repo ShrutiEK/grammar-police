@@ -30,11 +30,11 @@ export function AssessmentResults({
   return (
     <section
       aria-busy={isBusy}
-      className="rounded-2xl border-2 border-ink bg-white p-4 shadow-[5px_5px_0_#17213d] sm:rounded-3xl sm:p-5"
+      className="rounded-2xl border-2 border-ink bg-surface p-4 shadow-[5px_5px_0_#17213d] sm:rounded-3xl sm:p-5"
     >
       {assessment.languageWarning && (
         <p
-          className="rounded-xl border-2 border-[#b96a00] bg-[#fff5dc] p-3 text-sm font-semibold text-ink"
+          className="rounded-xl border-2 border-eyebrow bg-accent-soft p-3 text-base font-semibold text-ink"
           role="alert"
         >
           {assessment.languageHint ||
@@ -45,7 +45,7 @@ export function AssessmentResults({
       <div className={assessment.languageWarning ? "mt-4" : ""}>
         {isFinalQuestion ? (
           <button
-            className="primary-button w-full cursor-pointer bg-support"
+            className="primary-button w-full cursor-pointer bg-support text-ink"
             disabled={isBusy}
             onClick={onShowFeedback}
             type="button"
@@ -55,7 +55,7 @@ export function AssessmentResults({
         ) : isCheckpoint ? (
           <div className="grid gap-2.5 sm:grid-cols-2">
             <button
-              className="primary-button w-full cursor-pointer bg-support"
+              className="primary-button w-full cursor-pointer bg-support text-ink"
               disabled={isBusy}
               onClick={onContinue}
               type="button"
@@ -84,7 +84,7 @@ export function AssessmentResults({
 
         {progressMessage && (
           <p
-            className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-center text-sm font-semibold text-ink"
+            className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-center text-base font-semibold text-ink"
             role="status"
           >
             <span
