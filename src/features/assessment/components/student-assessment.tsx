@@ -49,6 +49,7 @@ import {
 } from "./assessment-results";
 import { ConversationHistory } from "./conversation-history";
 import { PictureConversationResults } from "./picture-conversation-results";
+import { PariConversationCard } from "./pari-conversation-card";
 import { PicturePromptCard } from "./picture-prompt-card";
 import { RecordingPanel } from "./recording-panel";
 
@@ -67,6 +68,8 @@ export function StudentAssessment({
     recordResult,
     advanceToNextQuestion,
     switchPicture,
+    startPariConversation,
+    returnToPictureConversation,
     resetSession,
   } = useAssessmentSession(initialPictureFilename);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
@@ -87,6 +90,7 @@ export function StudentAssessment({
   const [pendingCtaAction, setPendingCtaAction] =
     useState<AssessmentCtaAction | null>(null);
   const [writtenAnswer, setWrittenAnswer] = useState("");
+  const [isChoosingPariTopic, setIsChoosingPariTopic] = useState(false);
 
   useEffect(() => {
     // Migrate feedback saved by the earlier sessionStorage version, then hydrate
@@ -168,6 +172,20 @@ export function StudentAssessment({
     setFeedback(null);
     setAssessmentError(null);
     setWrittenAnswer("");
+    reset();
+  }
+
+  function startNewConversation() {
+    if (session.conversationMode !== "pari") {
+      startNewPicture();
+      return;
+    }
+
+    setFeedback(null);
+    setAssessmentHistory([]);
+    setAssessmentError(null);
+    setWrittenAnswer("");
+    setIsChoosingPariTopic(true);
     reset();
   }
 
@@ -366,6 +384,11 @@ export function StudentAssessment({
           currentQuestionType: currentTurn.questionType ?? "picture_follow_up",
           focusTopic: session.focusTopic,
           conversationContext,
+          conversationMode: session.conversationMode ?? "picture",
+          conversationTopic:
+            session.conversationMode === "pari"
+              ? (session.focusTopic ?? undefined)
+              : undefined,
         },
         {
           onBatchTranscriptionPending: () => {
@@ -422,7 +445,11 @@ export function StudentAssessment({
       input: createPictureConversationInput(session),
     } satisfies PictureAssessmentAttempt;
     const cumulativeAttempts = mergePictureAssessmentAttempts([
-      ...assessmentHistory,
+      ...assessmentHistory.filter(
+        (attempt) =>
+          (attempt.input.conversationMode ?? "picture") ===
+          (session.conversationMode ?? "picture"),
+      ),
       currentAttempt,
     ]);
     const cumulativeAssessment =
@@ -433,6 +460,7 @@ export function StudentAssessment({
         <section className="mx-auto max-w-6xl space-y-6">
           <PictureConversationResults
             assessment={cumulativeAssessment}
+            conversationMode={session.conversationMode ?? "picture"}
             canContinueConversation={currentTurn.number < MAX_QUESTIONS}
             canStartNewPicture={
               currentTurn.number >= MAX_QUESTIONS || hasUnseenPicture
@@ -466,7 +494,7 @@ export function StudentAssessment({
                 "Your next challenge will use what came through in these conversations.",
               );
             }}
-            onStartNewAssessment={startNewPicture}
+            onStartNewAssessment={startNewConversation}
           />
           {assessmentError && (
             <p
@@ -491,42 +519,78 @@ export function StudentAssessment({
         </header>
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
-          <PicturePromptCard
-            canChangePicture={hasUnseenPicture && !currentResult}
-            isChangeDisabled={
-              isAnalyzing ||
-              isTranscribingLongRecording ||
-              recordingState === "recording" ||
-              recordingState === "requesting-permission"
-            }
-            isChangingPicture={pendingCtaAction === "change-picture"}
-            prompt={currentPrompt}
-            onChangePicture={changePictureDuringAssessment}
-          />
-          <RecordingPanel
-            assessmentError={assessmentError}
-            feedbackProgress={feedbackProgress}
-            hasResult={currentResult !== null}
-            isAnalyzing={isAnalyzing}
-            isTranscribingLongRecording={isTranscribingLongRecording}
-            isPreparing={recordingState === "requesting-permission"}
-            isRecording={recordingState === "recording"}
-            question={currentTurn.question}
-            recording={recording}
-            statusMessage={getRecordingStatusMessage(recordingState)}
-            writtenAnswer={writtenAnswer}
-            onAnalyzeRecording={() => submitAnswer("spoken")}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onSubmitWrittenAnswer={() => submitAnswer("written")}
-            onWrittenAnswerChange={setWrittenAnswer}
-          />
+          {session.conversationMode === "pari" || isChoosingPariTopic ? (
+            <PariConversationCard
+              activeTopicId={session.pariTopicId ?? null}
+              isDisabled={
+                isAnalyzing ||
+                isTranscribingLongRecording ||
+                recordingState === "recording" ||
+                recordingState === "requesting-permission" ||
+                Boolean(currentResult)
+              }
+              onChooseTopic={(topicId) => {
+                startPariConversation(topicId);
+                setAssessmentHistory([]);
+                setFeedback(null);
+                setIsChoosingPariTopic(false);
+                setWrittenAnswer("");
+                reset();
+              }}
+              onReturnToPicture={() => {
+                returnToPictureConversation();
+                setAssessmentHistory([]);
+                setFeedback(null);
+                setIsChoosingPariTopic(false);
+                setWrittenAnswer("");
+                reset();
+              }}
+            />
+          ) : (
+            <PicturePromptCard
+              canChangePicture={hasUnseenPicture && !currentResult}
+              isChangeDisabled={
+                isAnalyzing ||
+                isTranscribingLongRecording ||
+                recordingState === "recording" ||
+                recordingState === "requesting-permission"
+              }
+              isChangingPicture={pendingCtaAction === "change-picture"}
+              prompt={currentPrompt}
+              onChangePicture={changePictureDuringAssessment}
+              onDmWithPari={() => setIsChoosingPariTopic(true)}
+            />
+          )}
+          {!isChoosingPariTopic && (
+            <RecordingPanel
+              assessmentError={assessmentError}
+              conversationMode={session.conversationMode ?? "picture"}
+              feedbackProgress={feedbackProgress}
+              hasResult={currentResult !== null}
+              isAnalyzing={isAnalyzing}
+              isTranscribingLongRecording={isTranscribingLongRecording}
+              isPreparing={recordingState === "requesting-permission"}
+              isRecording={recordingState === "recording"}
+              question={currentTurn.question}
+              recording={recording}
+              statusMessage={getRecordingStatusMessage(recordingState)}
+              writtenAnswer={writtenAnswer}
+              onAnalyzeRecording={() => submitAnswer("spoken")}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onSubmitWrittenAnswer={() => submitAnswer("written")}
+              onWrittenAnswerChange={setWrittenAnswer}
+            />
+          )}
         </div>
 
         {currentResult && (
           <AssessmentResults
             assessment={currentResult.assessment}
-            canChangePicture={hasUnseenPicture}
+            canChangePicture={
+              session.conversationMode !== "pari" && hasUnseenPicture
+            }
+            conversationMode={session.conversationMode ?? "picture"}
             isCheckpoint={isCheckpoint}
             isFinalQuestion={!canContinueConversation}
             pendingAction={pendingCtaAction}

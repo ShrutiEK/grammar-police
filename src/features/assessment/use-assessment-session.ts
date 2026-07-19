@@ -15,8 +15,10 @@ import {
 } from "./assessment-session.schema";
 import {
   createInitialAssessmentSession,
+  createPariAssessmentSession,
   createSwitchedPictureSession,
 } from "./assessment-session";
+import type { PariConversationTopicId } from "./pari-conversation.data";
 
 const SESSION_STORAGE_KEY = "grammar_police_assessment_session_v2";
 export const MAX_QUESTIONS = 8;
@@ -174,6 +176,30 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     });
   }, []);
 
+  const startPariConversation = useCallback(
+    (topicId: PariConversationTopicId) => {
+      setSession((currentSession) => {
+        const nextSession = createPariAssessmentSession(
+          currentSession,
+          topicId,
+        );
+        saveSession(nextSession);
+        return nextSession;
+      });
+    },
+    [],
+  );
+
+  const returnToPictureConversation = useCallback(() => {
+    setSession((currentSession) => {
+      const nextSession = createInitialAssessmentSession(
+        currentSession.selectedPictureFilename,
+      );
+      saveSession(nextSession);
+      return nextSession;
+    });
+  }, []);
+
   const resetSession = useCallback(() => {
     setSession((currentSession) => {
       const nextSession = createInitialAssessmentSession(
@@ -189,6 +215,8 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     recordResult,
     advanceToNextQuestion,
     switchPicture,
+    startPariConversation,
+    returnToPictureConversation,
     resetSession,
   };
 }

@@ -46,6 +46,7 @@ const session: AssessmentSession = {
 describe("createPictureConversationInput", () => {
   it("preserves each answer's mode, conversation context, and safety signals", () => {
     expect(createPictureConversationInput(session)).toEqual({
+      conversationMode: "picture",
       pictureFilename: "picnic.png",
       turns: [
         {
@@ -68,6 +69,20 @@ describe("createPictureConversationInput", () => {
           responseText: "I fly kites with my sister at the beach.",
         },
       ],
+    });
+  });
+
+  it("treats every DM with Pari answer as personal conversation evidence", () => {
+    expect(
+      createPictureConversationInput({
+        ...session,
+        conversationMode: "pari",
+        pariTopicId: "hobbies",
+      }),
+    ).toMatchObject({
+      conversationMode: "pari",
+      pariTopicId: "hobbies",
+      turns: [{ kind: "personal_follow_up" }, { kind: "personal_follow_up" }],
     });
   });
 });

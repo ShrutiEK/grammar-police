@@ -11,6 +11,7 @@ type AssessmentResultsProperties = Readonly<{
   onContinue: () => void;
   onChangePicture: () => void;
   onShowFeedback: () => void;
+  conversationMode?: "picture" | "pari";
 }>;
 
 export function AssessmentResults({
@@ -22,6 +23,7 @@ export function AssessmentResults({
   onContinue,
   onChangePicture,
   onShowFeedback,
+  conversationMode = "picture",
 }: AssessmentResultsProperties) {
   const isBusy = pendingAction !== null;
   const hasActions = isFinalQuestion || isCheckpoint;
@@ -77,7 +79,7 @@ export function AssessmentResults({
               >
                 Keep talking →
               </button>
-              {canChangePicture && (
+              {canChangePicture && conversationMode === "picture" && (
                 <button
                   className="primary-button w-full cursor-pointer bg-surface text-ink"
                   disabled={isBusy}

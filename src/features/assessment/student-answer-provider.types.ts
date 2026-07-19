@@ -9,6 +9,8 @@ export type ConversationContextTurn = Readonly<{
 }>;
 
 export type AssessStudentEnglishInput = Readonly<{
+  conversationMode?: "picture" | "pari";
+  conversationTopic?: string | null;
   pictureDescription: string;
   transcript: string;
   currentQuestion: string;

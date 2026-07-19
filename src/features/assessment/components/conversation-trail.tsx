@@ -2,10 +2,12 @@ import { MAX_QUESTIONS } from "../use-assessment-session";
 
 type ConversationTrailProperties = Readonly<{
   currentQuestionNumber: number;
+  mode?: "picture" | "pari";
 }>;
 
 export function ConversationTrail({
   currentQuestionNumber,
+  mode = "picture",
 }: ConversationTrailProperties) {
   return (
     <nav
@@ -53,7 +55,9 @@ export function ConversationTrail({
       </ol>
       <p className="mt-2 text-sm text-muted">
         {currentQuestionNumber === 1
-          ? "Start with what catches your eye."
+          ? mode === "pari"
+            ? "Start with an idea or experience you would like to share."
+            : "Start with what catches your eye."
           : currentQuestionNumber < MAX_QUESTIONS
             ? "Each answer opens a more personal question."
             : "One last answer, then your highlights are ready."}

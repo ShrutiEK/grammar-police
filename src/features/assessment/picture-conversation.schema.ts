@@ -374,6 +374,10 @@ export type PictureConversationAssessment = z.infer<
 >;
 
 export const pictureConversationInputSchema = z.object({
+  conversationMode: z.enum(["picture", "pari"]).optional(),
+  pariTopicId: z
+    .enum(["movies", "stories", "hobbies", "daily-life"])
+    .optional(),
   pictureFilename: z.enum([
     "beach.png",
     "classroom.png",
@@ -389,6 +393,7 @@ export type PictureConversationInput = z.infer<
 >;
 
 export type PictureConversationAssessmentInput = Readonly<{
+  conversationMode?: "picture" | "pari";
   pictureDescription: string;
   turns: readonly PictureConversationTurn[];
 }>;

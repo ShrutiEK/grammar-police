@@ -4,6 +4,14 @@ import {
   learnerAssessmentSchema,
   questionTypeSchema,
 } from "./assessment.schema";
+import { pariConversationTopics } from "./pari-conversation.data";
+
+const pariTopicIdSchema = z.enum(
+  pariConversationTopics.map((topic) => topic.id) as [
+    (typeof pariConversationTopics)[number]["id"],
+    ...(typeof pariConversationTopics)[number]["id"][],
+  ],
+);
 
 export const pictureFilenameSchema = z.enum([
   "beach.png",
@@ -30,6 +38,8 @@ export const previousPictureSessionSchema = z.object({
 });
 
 export const assessmentSessionSchema = z.object({
+  conversationMode: z.enum(["picture", "pari"]).optional(),
+  pariTopicId: pariTopicIdSchema.nullable().optional(),
   selectedPictureFilename: pictureFilenameSchema,
   focusTopic: z.string().trim().min(1).nullable(),
   questionsAndAnswers: z.array(conversationTurnSchema).min(1).max(8),
