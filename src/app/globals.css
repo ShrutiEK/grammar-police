@@ -31,7 +31,7 @@
 
 @layer components {
   .assessment-card {
-    @apply w-full max-w-3xl rounded-4xl border-[3px] border-ink bg-white/90 px-8 py-10 text-center shadow-card sm:px-16 sm:py-16;
+    @apply w-full max-w-3xl rounded-3xl border-2 border-ink bg-white/90 px-5 py-8 text-center shadow-[6px_6px_0_#17213d] sm:rounded-4xl sm:px-12 sm:py-12;
   }
 
   .section-eyebrow {
@@ -39,6 +39,6 @@
   }
 
   .primary-button {
-    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-6 py-3 font-bold text-ink transition-transform enabled:hover:-translate-y-0.5 enabled:focus-visible:outline-3 enabled:focus-visible:outline-offset-4 enabled:focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-65;
+    @apply min-h-11 rounded-full border-2 border-ink bg-accent px-5 py-2.5 text-sm font-bold text-ink transition-transform enabled:hover:-translate-y-0.5 enabled:focus-visible:outline-3 enabled:focus-visible:outline-offset-4 enabled:focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-65 sm:min-h-12 sm:text-base;
   }
 }
