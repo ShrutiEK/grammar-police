@@ -4,23 +4,17 @@ import {
   containsNonEnglishLanguage,
   enforceEnglishOnlyResponse,
 } from "./english-only";
+import type { LearnerAssessment } from "./assessment.schema";
 
 const validEnglishAssessment = {
-  scores: {
-    vocabulary: 3,
-    grammar: 3,
-    reasoning: 3,
-    sentenceComplexity: 3,
-    communication: 3,
-  },
-  feedback: "You described the action clearly.",
   languageWarning: false,
   languageHint: "",
   isGrounded: true,
   isRelevantToFocus: true,
   focusTopic: "the children flying the kite",
   nextQuestion: "Why do you think they are flying the kite?",
-};
+  nextQuestionType: "picture_follow_up",
+} satisfies LearnerAssessment;
 
 describe("containsNonEnglishLanguage", () => {
   it("detects answers written in a non-English script", () => {
@@ -46,7 +40,6 @@ describe("containsNonEnglishLanguage", () => {
     const result = enforceEnglishOnlyResponse({
       assessment: {
         ...validEnglishAssessment,
-        feedback: "Aapne sahi jawab diya hai.",
         nextQuestion: "Bacche kya kar rahe hain?",
       },
       transcript: "Bacche kite uda rahe hain.",
@@ -57,12 +50,10 @@ describe("containsNonEnglishLanguage", () => {
     expect(result.languageWarning).toBe(true);
     expect(result.isGrounded).toBe(false);
     expect(result.isRelevantToFocus).toBe(false);
-    expect(result.feedback).toBe(
-      "Please answer in English so I can assess your communication skills accurately.",
-    );
     expect(result.nextQuestion).toBe(
       "Please answer in English. What are the children doing with the kite?",
     );
+    expect(result.nextQuestionType).toBe("picture_follow_up");
     expect(containsNonEnglishLanguage(result.nextQuestion)).toBe(false);
   });
 

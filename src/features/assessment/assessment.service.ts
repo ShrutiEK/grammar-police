@@ -1,7 +1,11 @@
 import "server-only";
 
 import { assessStudentEnglish } from "@/integrations/sarvam/sarvam.assessment";
-import { transcribeStudentRecording } from "@/integrations/sarvam/sarvam.transcription";
+import {
+  getStudentRecordingTranscription,
+  transcribeStudentRecording,
+  type StudentRecordingTranscription,
+} from "@/integrations/sarvam/sarvam.transcription";
 
 import { enforceEnglishOnlyResponse } from "./english-only";
 import { selectFollowUpQuestion } from "./follow-up-question";
@@ -17,6 +21,14 @@ export type CompletedAssessment = Readonly<{
   transcript: string;
 }>;
 
+export type PendingTranscription = Extract<
+  StudentRecordingTranscription,
+  { status: "processing" }
+>;
+
+export type StudentAssessmentResult =
+  CompletedAssessment | PendingTranscription;
+
 function keepFollowUpOnFocus(
   assessment: Awaited<ReturnType<typeof assessStudentEnglish>>,
   existingFocusTopic: string | null,
@@ -29,8 +41,9 @@ function keepFollowUpOnFocus(
   return {
     ...assessment,
     focusTopic: lockedFocusTopic,
-    nextQuestion: selectFollowUpQuestion({
+    ...selectFollowUpQuestion({
       modelQuestion: assessment.nextQuestion,
+      modelQuestionType: assessment.nextQuestionType,
       focusTopic: lockedFocusTopic,
       previousQuestions,
       sceneFallbackQuestion: fallbackQuestion,
@@ -40,7 +53,9 @@ function keepFollowUpOnFocus(
 
 type CompleteAssessmentInput = Readonly<{
   audioFile: File | null;
+  audioDurationInSeconds: number | null;
   writtenAnswer: string | null;
+  transcriptionJobId: string | null;
   pictureDescription: string;
   fallbackQuestion: string;
   currentQuestion: string;
@@ -50,18 +65,29 @@ type CompleteAssessmentInput = Readonly<{
 
 export async function completeStudentAssessment({
   audioFile,
+  audioDurationInSeconds,
   writtenAnswer,
+  transcriptionJobId,
   pictureDescription,
   fallbackQuestion,
   currentQuestion,
   focusTopic,
   conversationContext,
-}: CompleteAssessmentInput): Promise<CompletedAssessment> {
-  const transcript = writtenAnswer?.trim()
-    ? writtenAnswer.trim()
+}: CompleteAssessmentInput): Promise<StudentAssessmentResult> {
+  const transcription = transcriptionJobId
+    ? await getStudentRecordingTranscription(transcriptionJobId)
     : audioFile
-      ? await transcribeStudentRecording(audioFile)
-      : "";
+      ? await transcribeStudentRecording(
+          audioFile,
+          audioDurationInSeconds ?? undefined,
+        )
+      : null;
+
+  if (transcription?.status === "processing") {
+    return transcription;
+  }
+
+  const transcript = writtenAnswer?.trim() || transcription?.transcript || "";
 
   if (!transcript) {
     throw new Error("We could not find an answer to assess.");

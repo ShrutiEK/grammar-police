@@ -23,11 +23,11 @@ function createInitialSession(
   return {
     selectedPictureFilename,
     focusTopic: null,
-    status: "in_progress",
     questionsAndAnswers: [
       {
         number: 1,
         question: INITIAL_QUESTION,
+        questionType: "picture_follow_up",
         answer: null,
         answerMode: null,
         assessment: null,
@@ -75,6 +75,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     (
       result: AssessmentResult,
       answerMode: NonNullable<ConversationTurn["answerMode"]>,
+      audioDurationInSeconds: number | null = null,
     ) => {
       setSession((currentSession) => {
         const questionsAndAnswers = currentSession.questionsAndAnswers.map(
@@ -84,6 +85,8 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
                   ...turn,
                   answer: result.transcript,
                   answerMode,
+                  audioDurationInSeconds:
+                    answerMode === "spoken" ? audioDurationInSeconds : null,
                   assessment: result.assessment,
                 }
               : turn,
@@ -96,10 +99,6 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
               ? result.assessment.focusTopic || null
               : null),
           questionsAndAnswers,
-          status:
-            questionsAndAnswers.length >= MAX_QUESTIONS
-              ? "completed"
-              : currentSession.status,
         };
         saveSession(nextSession);
         return nextSession;
@@ -126,22 +125,12 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
           {
             number: currentSession.questionsAndAnswers.length + 1,
             question: currentTurn.assessment.nextQuestion,
+            questionType: currentTurn.assessment.nextQuestionType,
             answer: null,
             answerMode: null,
             assessment: null,
           },
         ],
-      };
-      saveSession(nextSession);
-      return nextSession;
-    });
-  }, []);
-
-  const completeSession = useCallback(() => {
-    setSession((currentSession) => {
-      const nextSession: AssessmentSession = {
-        ...currentSession,
-        status: "completed",
       };
       saveSession(nextSession);
       return nextSession;
@@ -158,7 +147,6 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     session,
     recordResult,
     advanceToNextQuestion,
-    completeSession,
     resetSession,
   };
 }

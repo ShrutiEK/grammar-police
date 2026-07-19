@@ -23,6 +23,18 @@ function getTextField(formData: FormData, name: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function getOptionalNumberField(formData: FormData, name: string) {
+  const value = getTextField(formData, name);
+
+  if (!value) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
+}
+
 function parseConversationContext(value: string) {
   try {
     return conversationContextSchema.safeParse(JSON.parse(value) as unknown);
@@ -37,6 +49,12 @@ export async function POST(request: Request) {
     const audioValue = formData.get("audio");
     const audioFile = audioValue instanceof File ? audioValue : null;
     const writtenAnswer = getTextField(formData, "writtenAnswer");
+    const transcriptionJobId =
+      getTextField(formData, "transcriptionJobId") || null;
+    const audioDurationInSeconds = getOptionalNumberField(
+      formData,
+      "audioDurationInSeconds",
+    );
     const pictureFilename = pictureFilenameSchema.safeParse(
       getTextField(formData, "pictureFilename"),
     );
@@ -46,9 +64,18 @@ export async function POST(request: Request) {
       getTextField(formData, "conversationContext"),
     );
 
-    if ((audioFile && writtenAnswer) || (!audioFile && !writtenAnswer)) {
+    const isPollingBatchTranscription = transcriptionJobId !== null;
+
+    if (
+      (audioFile && writtenAnswer) ||
+      (isPollingBatchTranscription && (audioFile || writtenAnswer)) ||
+      (!isPollingBatchTranscription && !audioFile && !writtenAnswer)
+    ) {
       return NextResponse.json(
-        { error: "Please submit either a recording or a written answer." },
+        {
+          error:
+            "Please submit either a recording, a written answer, or a pending transcription.",
+        },
         { status: 400 },
       );
     }
@@ -97,7 +124,9 @@ export async function POST(request: Request) {
 
     const result = await completeStudentAssessment({
       audioFile,
+      audioDurationInSeconds,
       writtenAnswer: writtenAnswer || null,
+      transcriptionJobId,
       pictureDescription: pictureDescriptions[pictureFilename.data].description,
       fallbackQuestion: fallbackQuestionsByFilename[pictureFilename.data],
       currentQuestion,

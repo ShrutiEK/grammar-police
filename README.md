@@ -6,14 +6,17 @@ and practise activities such as idioms and reading comprehension. The AI uses
 their responses to explain learning gaps, recommend a skill track, generate a
 lesson, and show progress over time.
 
-The current prototype implements a grounded picture-conversation assessment.
-It chooses one local scene, accepts spoken or written answers, asks relevant
-follow-up questions, and displays cumulative communication feedback. It stores
-only the current browser session in `localStorage`; it does not yet persist a
-learner profile, generate adaptive lessons, or maintain a learning graph.
+The current prototype implements a grounded picture conversation. It chooses a
+local scene, accepts spoken or written answers, asks relevant follow-up
+questions, and keeps the conversation safely in English and on topic. The
+metrics feature then analyses the completed conversation. It stores only the
+current browser session in `localStorage`; it does not yet persist a learner
+profile, generate adaptive lessons, or maintain a learning graph.
 
 See [product context](docs/PRODUCT_CONTEXT.md) for the agreed product behaviour
-and [delivery roadmap](docs/ROADMAP.md) for tracked work.
+and [delivery roadmap](docs/ROADMAP.md) for tracked work. The
+[picture-conversation metrics specification](docs/METRICS_SPEC.md) defines the
+first assessment-engine contract.
 
 ## Prerequisites
 

@@ -3,21 +3,13 @@ import { describe, expect, it } from "vitest";
 import { learnerAssessmentSchema } from "./assessment.schema";
 
 const validAssessment = {
-  scores: {
-    vocabulary: 4,
-    grammar: 3,
-    reasoning: 4,
-    sentenceComplexity: 3,
-    communication: 4,
-  },
-  feedback:
-    "You named the action clearly. Try joining your ideas with 'because'.",
   languageWarning: false,
   languageHint: "",
   isGrounded: true,
   isRelevantToFocus: true,
   focusTopic: "the children flying the kite",
   nextQuestion: "Why do you think the children enjoy flying the kite?",
+  nextQuestionType: "picture_follow_up",
 };
 
 describe("learnerAssessmentSchema", () => {
@@ -27,10 +19,10 @@ describe("learnerAssessmentSchema", () => {
     );
   });
 
-  it("rejects scores outside the 1 to 5 range", () => {
+  it("rejects an unknown follow-up type", () => {
     const result = learnerAssessmentSchema.safeParse({
       ...validAssessment,
-      scores: { ...validAssessment.scores, communication: 6 },
+      nextQuestionType: "unknown",
     });
 
     expect(result.success).toBe(false);

@@ -71,7 +71,6 @@ export function enforceEnglishOnlyResponse({
   const learnerUsedNonEnglish = containsNonEnglishLanguage(transcript);
   const modelReturnedNonEnglish = containsNonEnglishLanguage(
     [
-      assessment.feedback,
       assessment.languageHint,
       assessment.focusTopic,
       assessment.nextQuestion,
@@ -92,8 +91,6 @@ export function enforceEnglishOnlyResponse({
 
   return {
     ...assessment,
-    feedback:
-      "Please answer in English so I can assess your communication skills accurately.",
     languageWarning: true,
     languageHint:
       "Please answer in English only. Avoid mixing English with another language.",
@@ -103,6 +100,7 @@ export function enforceEnglishOnlyResponse({
       : assessment.isRelevantToFocus,
     focusTopic: safeFocusTopic ?? "",
     nextQuestion,
+    nextQuestionType: "picture_follow_up",
   };
 }
 import type { LearnerAssessment } from "./assessment.schema";

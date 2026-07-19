@@ -1,3 +1,5 @@
+import type { QuestionType } from "./assessment.schema";
+
 const contextualPronouns = new Set([
   "he",
   "her",
@@ -39,6 +41,11 @@ const ignoredWords = new Set([
   "would",
   "your",
 ]);
+
+type QuestionCandidate = Readonly<{
+  nextQuestion: string;
+  nextQuestionType: QuestionType;
+}>;
 
 function getWords(text: string) {
   return text.toLowerCase().match(/[a-z]+/g) ?? [];
@@ -97,20 +104,42 @@ function isRelatedToFocus(question: string, focusTopic: string) {
   );
 }
 
-function createTopicFallbacks(focusTopic: string) {
+function createTopicFallbacks(focusTopic: string): QuestionCandidate[] {
   return [
-    `What visible detail about ${focusTopic} have you not described yet?`,
-    `What do you think is happening with ${focusTopic}, and why?`,
-    `What might happen next with ${focusTopic}?`,
-    `Where is ${focusTopic} in the picture, and what is nearby?`,
-    `How would you describe ${focusTopic} to someone who cannot see the picture?`,
-    `What does ${focusTopic} make you think or feel?`,
-    `Have you seen something like ${focusTopic} before? Tell me about it.`,
+    {
+      nextQuestion: `What visible detail about ${focusTopic} have you not described yet?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `What do you think is happening with ${focusTopic}, and why?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `What might happen next with ${focusTopic}?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `Where is ${focusTopic} in the picture, and what is nearby?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `How would you describe ${focusTopic} to someone who cannot see the picture?`,
+      nextQuestionType: "picture_follow_up",
+    },
+    {
+      nextQuestion: `What does ${focusTopic} make you think or feel?`,
+      nextQuestionType: "personal_follow_up",
+    },
+    {
+      nextQuestion: `Have you seen something like ${focusTopic} before? Tell me about it.`,
+      nextQuestionType: "personal_follow_up",
+    },
   ];
 }
 
 type SelectFollowUpQuestionInput = Readonly<{
   modelQuestion: string;
+  modelQuestionType: QuestionType;
   focusTopic: string;
   previousQuestions: ReadonlyArray<string>;
   sceneFallbackQuestion: string;
@@ -118,10 +147,11 @@ type SelectFollowUpQuestionInput = Readonly<{
 
 export function selectFollowUpQuestion({
   modelQuestion,
+  modelQuestionType,
   focusTopic,
   previousQuestions,
   sceneFallbackQuestion,
-}: SelectFollowUpQuestionInput) {
+}: SelectFollowUpQuestionInput): QuestionCandidate {
   const modelQuestionIsNew = !wasQuestionAlreadyAsked(
     modelQuestion,
     previousQuestions,
@@ -131,22 +161,43 @@ export function selectFollowUpQuestion({
     modelQuestionIsNew &&
     (!focusTopic || isRelatedToFocus(modelQuestion, focusTopic))
   ) {
-    return modelQuestion;
+    return {
+      nextQuestion: modelQuestion,
+      nextQuestionType: modelQuestionType,
+    };
   }
 
-  const fallbackCandidates = focusTopic
+  const fallbackCandidates: QuestionCandidate[] = focusTopic
     ? createTopicFallbacks(focusTopic)
     : [
-        sceneFallbackQuestion,
-        "Choose one real person in the picture. What are they doing?",
-        "Choose one visible activity that you have not mentioned yet and describe it.",
-        "What is one real detail in the foreground that you have not described?",
+        {
+          nextQuestion: sceneFallbackQuestion,
+          nextQuestionType: "picture_follow_up",
+        },
+        {
+          nextQuestion:
+            "Choose one real person in the picture. What are they doing?",
+          nextQuestionType: "picture_follow_up",
+        },
+        {
+          nextQuestion:
+            "Choose one visible activity that you have not mentioned yet and describe it.",
+          nextQuestionType: "picture_follow_up",
+        },
+        {
+          nextQuestion:
+            "What is one real detail in the foreground that you have not described?",
+          nextQuestionType: "picture_follow_up",
+        },
       ];
 
   return (
     fallbackCandidates.find(
-      (candidate) => !wasQuestionAlreadyAsked(candidate, previousQuestions),
-    ) ??
-    `What new detail can you add to answer question ${previousQuestions.length + 1}?`
+      (candidate) =>
+        !wasQuestionAlreadyAsked(candidate.nextQuestion, previousQuestions),
+    ) ?? {
+      nextQuestion: `What new detail can you add to answer question ${previousQuestions.length + 1}?`,
+      nextQuestionType: "picture_follow_up",
+    }
   );
 }

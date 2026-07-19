@@ -4,6 +4,7 @@ type RecordingPanelProperties = Readonly<{
   assessmentError: string | null;
   hasResult: boolean;
   isAnalyzing: boolean;
+  isTranscribingLongRecording: boolean;
   isPreparing: boolean;
   isRecording: boolean;
   question: string;
@@ -22,6 +23,7 @@ export function RecordingPanel({
   assessmentError,
   hasResult,
   isAnalyzing,
+  isTranscribingLongRecording,
   isPreparing,
   isRecording,
   question,
@@ -126,7 +128,11 @@ export function RecordingPanel({
           onClick={onAnalyzeRecording}
           type="button"
         >
-          {isAnalyzing ? "Analyzing your English…" : "Submit spoken answer"}
+          {isTranscribingLongRecording
+            ? "Transcribing your recording…"
+            : isAnalyzing
+              ? "Analyzing your English…"
+              : "Submit spoken answer"}
         </button>
       )}
 
