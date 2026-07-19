@@ -7,12 +7,48 @@ This repository contains an AI-powered English-learning application for users.
 The core product flow is:
 
 1. A student describes an image by speaking.
-2. Speech is converted into a transcript.
-3. AI evaluates the student's English abilities.
-4. AI identifies strengths and learning gaps.
-5. AI generates a personalised learning roadmap.
-6. AI creates an appropriate speaking exercise.
+2. The AI asks a relevant personal follow-up based on the image detail the
+   student chose to discuss.
+3. Speech is converted into a transcript.
+4. AI evaluates the student's English abilities.
+5. AI identifies strengths and learning gaps.
+6. AI generates a personalised learning roadmap and an appropriate exercise.
 7. The student's progress is updated.
+
+The application is English-only for now. It supports scene conversation,
+read-aloud, idiom, and reading-comprehension activities. Read
+`docs/PRODUCT_CONTEXT.md` before changing product behaviour and keep
+`docs/ROADMAP.md` accurate when completing planned work.
+
+Authentication and age capture are later features. When an activity is
+researched or implemented, define its supported age range and adapt its content,
+reading level, vocabulary, examples, feedback tone, and safety constraints to
+that age range. Age must drive activity selection once it is available.
+
+## Visual design and interaction
+
+The application should feel inviting, playful, and credible for children and
+adult learners. Build a fun learning experience, not a dull form and not a
+superficial game.
+
+- Prefer expressive, contextually relevant images and illustrations for scenes,
+  idioms, lessons, and progress moments.
+- Use reputable image sources such as Unsplash, or create original illustrations
+  when they better serve the lesson. Product content must be free-to-use,
+  public-domain, openly licensed, or original; do not require paid sources for
+  the initial product.
+- Learners may paste material they are authorised to access. Treat it as private
+  input and do not republish it or add it to a shared content library.
+- Use animation deliberately to communicate state and reward progress: listening,
+  recording, thinking, success, level transition, and gentle celebration are
+  good candidates.
+- Add small, responsive micro-interactions to buttons, cards, recording controls,
+  and progress indicators. Respect `prefers-reduced-motion` and never make an
+  animation block reading, recording, or task completion.
+- Keep the visual system cohesive: clear typography, accessible contrast,
+  generous touch targets, concise copy, and a limited set of meaningful colours.
+- Do not add visual flair that obscures instructions, distracts from speech, or
+  makes assessment feedback difficult to understand.
 
 The application must remain easy to understand, demonstrate, test, and extend during the hackathon.
 
@@ -210,6 +246,14 @@ The UI may display concise evidence-based explanations such as:
 * the corrected sentence
 * the detected language concept
 * why that concept was selected for practice
+
+Do not claim that a transcript alone measures pronunciation accurately. A
+pronunciation score must be based on audio-aware evidence or be clearly labelled
+as an estimate.
+
+When using images, ground feedback in the actual image through a vision-capable
+provider or a curated scene inventory. Do not infer every scene detail from a
+generic text description.
 
 ---
 

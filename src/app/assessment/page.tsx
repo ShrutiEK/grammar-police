@@ -1,5 +1,5 @@
-import { StudentAssessment } from "@/features/assessment/components/student-assessment";
+import { redirect } from "next/navigation";
 
 export default function AssessmentPage() {
-  return <StudentAssessment />;
+  redirect("/");
 }

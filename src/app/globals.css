@@ -3,23 +3,72 @@
 @theme {
   --color-canvas: #fff9ed;
   --color-ink: #17213d;
-  --color-muted: #4f5870;
+  --color-muted: #343c52;
   --color-accent: #ffbd3e;
   --color-accent-soft: #ffe39a;
   --color-support: #bfe8dd;
   --color-eyebrow: #7a3e00;
+  --color-danger: #a62b23;
+  --color-surface: #ffffff;
+  --color-action-ink: #17213d;
   --font-sans:
-    Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+    var(--font-atkinson-hyperlegible), ui-rounded, "Segoe UI", system-ui,
+    -apple-system, sans-serif;
   --shadow-card: 10px 10px 0 #17213d;
 }
 
 @layer base {
   :root {
     color-scheme: light;
+    scrollbar-gutter: stable;
+  }
+
+  :root[data-font-size="large"] {
+    font-size: 112.5%;
+  }
+
+  :root[data-font-size="extra-large"] {
+    font-size: 125%;
+  }
+
+  :root[data-letter-spacing="wide"] {
+    letter-spacing: 0.04em;
+  }
+
+  :root[data-letter-spacing="extra-wide"] {
+    letter-spacing: 0.08em;
+  }
+
+  :root[data-theme="high-contrast"] {
+    --color-canvas: #ffffff;
+    --color-ink: #000000;
+    --color-muted: #242424;
+    --color-accent: #ffdf00;
+    --color-accent-soft: #fff29a;
+    --color-support: #9df2dd;
+    --color-eyebrow: #6b2500;
+    --color-danger: #8f0000;
+    --color-surface: #ffffff;
+    --shadow-card: 10px 10px 0 #000000;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-canvas: #111827;
+    --color-ink: #f9fafb;
+    --color-muted: #e5e7eb;
+    --color-accent: #fbc54c;
+    --color-accent-soft: #493b18;
+    --color-support: #174f46;
+    --color-eyebrow: #ffc76b;
+    --color-danger: #ffaaa3;
+    --color-surface: #1f2937;
+    --color-action-ink: #17213d;
+    --shadow-card: 10px 10px 0 #000000;
   }
 
   body {
-    @apply m-0 bg-canvas font-sans text-ink antialiased;
+    @apply m-0 bg-canvas font-sans text-[1.0625rem] leading-relaxed text-ink antialiased;
   }
 
   button,
@@ -27,18 +76,87 @@
   textarea {
     font: inherit;
   }
+
+  :where(a, button, summary) {
+    @apply transition-[transform,box-shadow,text-decoration-thickness];
+  }
+
+  a:hover,
+  summary:hover {
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.14em;
+  }
+
+  button:enabled:hover {
+    @apply -translate-y-0.5 shadow-[4px_4px_0_currentColor];
+  }
+
+  :where(a, button, audio, input, select, summary, textarea):focus-visible {
+    @apply outline-3 outline-offset-4 outline-ink;
+  }
 }
 
 @layer components {
   .assessment-card {
-    @apply w-full max-w-3xl rounded-4xl border-[3px] border-ink bg-white/90 px-8 py-10 text-center shadow-card sm:px-16 sm:py-16;
+    @apply w-full max-w-3xl rounded-3xl border-2 border-ink bg-surface px-5 py-8 text-center shadow-[6px_6px_0_#17213d] sm:rounded-4xl sm:px-12 sm:py-12;
   }
 
   .section-eyebrow {
-    @apply mb-3 text-sm font-bold tracking-wider text-eyebrow uppercase;
+    @apply mb-3 text-lg font-bold tracking-wide text-eyebrow;
   }
 
   .primary-button {
-    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-6 py-3 font-bold text-ink transition-transform enabled:hover:-translate-y-0.5 enabled:focus-visible:outline-3 enabled:focus-visible:outline-offset-4 enabled:focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-65;
+    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-7 py-3 text-xl leading-snug font-bold text-action-ink transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-65;
+  }
+
+  .accessibility-toolkit {
+    @apply fixed right-4 bottom-4 z-50 flex max-w-[calc(100vw-2rem)] flex-col items-end gap-3;
+  }
+
+  .accessibility-toolkit-trigger {
+    @apply inline-flex min-h-14 items-center gap-2 rounded-full border-2 border-ink bg-accent px-6 py-3 text-xl font-bold text-action-ink shadow-[4px_4px_0_#17213d];
+  }
+
+  .accessibility-toolkit-panel {
+    @apply max-h-[calc(100vh-6rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border-2 border-ink bg-surface p-5 text-ink shadow-card;
+  }
+
+  .toolkit-icon-button {
+    @apply grid size-14 shrink-0 place-items-center rounded-full border-2 border-ink bg-canvas text-2xl font-bold text-ink;
+  }
+
+  .toolkit-fieldset {
+    @apply mt-5 border-0 p-0;
+  }
+
+  .toolkit-fieldset legend {
+    @apply mb-2 text-base font-bold text-ink;
+  }
+
+  .toolkit-option-grid {
+    @apply grid grid-cols-3 gap-2;
+  }
+
+  .toolkit-option {
+    @apply min-h-14 rounded-xl border-2 border-ink bg-canvas px-3 py-3 text-xl font-bold text-ink;
+  }
+
+  .toolkit-option[aria-pressed="true"] {
+    @apply border-[3px] bg-accent text-action-ink underline decoration-2 underline-offset-4;
+  }
+
+  .toolkit-reset-button {
+    @apply mt-5 min-h-14 w-full rounded-xl border-2 border-ink bg-surface px-5 py-3 text-xl font-bold text-ink underline decoration-2 underline-offset-4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

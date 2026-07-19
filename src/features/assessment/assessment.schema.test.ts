@@ -3,28 +3,35 @@ import { describe, expect, it } from "vitest";
 import { learnerAssessmentSchema } from "./assessment.schema";
 
 const validAssessment = {
-  grammar_score: 80,
-  vocabulary_score: 85,
-  communication_score: 90,
-  pronunciation_score: 75,
-  grammatical_errors: ["Missing article 'the' before 'children'."],
-  vocabulary_errors: [],
-  mastered_skills: ["Correctly identified children playing football."],
-  child_friendly_feedback:
-    "Great job describing the children playing football!",
+  languageWarning: false,
+  languageHint: "",
+  isGrounded: true,
+  isRelevantToFocus: true,
+  focusTopic: "the children flying the kite",
+  nextQuestion: "Why do you think the children enjoy flying the kite?",
+  nextQuestionType: "picture_follow_up",
 };
 
 describe("learnerAssessmentSchema", () => {
-  it("accepts a complete learner assessment", () => {
+  it("accepts a complete turn assessment", () => {
     expect(learnerAssessmentSchema.safeParse(validAssessment).success).toBe(
       true,
     );
   });
 
-  it("rejects an assessment missing feedback", () => {
+  it("rejects an unknown follow-up type", () => {
     const result = learnerAssessmentSchema.safeParse({
       ...validAssessment,
-      child_friendly_feedback: "",
+      nextQuestionType: "unknown",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an assessment without a follow-up question", () => {
+    const result = learnerAssessmentSchema.safeParse({
+      ...validAssessment,
+      nextQuestion: "",
     });
 
     expect(result.success).toBe(false);

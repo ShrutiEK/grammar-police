@@ -1,12 +1,21 @@
 import { z } from "zod";
 
+export const questionTypeSchema = z.enum([
+  "picture_follow_up",
+  "personal_follow_up",
+]);
+
+export type QuestionType = z.infer<typeof questionTypeSchema>;
+
 export const learnerAssessmentSchema = z.object({
-  grammar_score: z.number().min(0).max(100),
-  vocabulary_score: z.number().min(0).max(100),
-  communication_score: z.number().min(0).max(100),
-  pronunciation_score: z.number().min(0).max(100),
-  grammatical_errors: z.array(z.string().trim()),
-  vocabulary_errors: z.array(z.string().trim()),
-  mastered_skills: z.array(z.string().trim()),
-  child_friendly_feedback: z.string().trim().min(1),
+  languageWarning: z.boolean(),
+  languageHint: z.string().trim(),
+  isGrounded: z.boolean(),
+  // True only when the learner answers the active question and stays on its locked topic.
+  isRelevantToFocus: z.boolean(),
+  focusTopic: z.string().trim(),
+  nextQuestion: z.string().trim().min(1),
+  nextQuestionType: questionTypeSchema,
 });
+
+export type LearnerAssessment = z.infer<typeof learnerAssessmentSchema>;
