@@ -64,4 +64,29 @@ describe("createAdaptiveExercisePrompt", () => {
     expect(prompt).toContain("supports correctAnswer without contradicting");
     expect(prompt).toContain('correctAnswer "a"');
   });
+
+  it("requires a new context and target rather than copying examples", () => {
+    const prompt = createAdaptiveExercisePrompt({
+      ...input,
+      recentAttempts: [
+        {
+          prompt: "Maya carried a ___ umbrella.",
+          correctAnswer: "striped",
+          exerciseContent:
+            "Maya carried a ___ umbrella. striped | softly | carried",
+          exerciseType: "fill_blank",
+          difficulty: 1,
+          selectedChoice: "striped",
+          wasCorrect: true,
+          hintUsed: false,
+        },
+      ],
+      previousPrompts: ["Maya carried a ___ umbrella."],
+    });
+
+    expect(prompt).toContain("VARIETY REQUIREMENT");
+    expect(prompt).toContain("different target word");
+    expect(prompt).toContain("Few-shot examples demonstrate structure only");
+    expect(prompt).toContain("striped");
+  });
 });

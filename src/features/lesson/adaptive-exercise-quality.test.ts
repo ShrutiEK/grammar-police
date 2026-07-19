@@ -75,6 +75,20 @@ describe("parseExerciseForRequest", () => {
     ).toThrow("reveals the correct answer");
   });
 
+  it("allows a required language form to appear elsewhere in the prompt", () => {
+    expect(() =>
+      parseExerciseForRequest(
+        {
+          ...exercise,
+          prompt: "Choose the article: I opened a book. ___ book was funny.",
+          choices: ["A", "An", "The"],
+          correctAnswer: "The",
+        },
+        { ...request, difficulty: 3 },
+      ),
+    ).not.toThrow();
+  });
+
   it("accepts ordered comma-separated answers for multiple blanks", () => {
     expect(
       parseExerciseForRequest(
