@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
-import {
-  Atkinson_Hyperlegible_Next,
-} from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
 
+import { siteConfig, siteUrl } from "@/config/site";
 import { AccessibilityToolkit } from "@/features/accessibility/accessibility-toolkit";
 
 import "./globals.css";
@@ -17,8 +16,49 @@ const atkinsonHyperlegible = Atkinson_Hyperlegible_Next({
 });
 
 export const metadata: Metadata = {
-  title: "English Spark",
-  description: "Friendly English conversation practice shaped around you.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: siteConfig.title,
+    template: `%s · ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: [...siteConfig.keywords],
+  category: "education",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: siteUrl,
+    locale: siteConfig.locale,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#fff9ed",
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
 };
 
 type RootLayoutProperties = Readonly<{
