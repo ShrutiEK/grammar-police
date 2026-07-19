@@ -11,38 +11,21 @@ import {
   type AssessmentSession,
   type ConversationTurn,
 } from "./assessment-session.schema";
+import {
+  createInitialAssessmentSession,
+  createSwitchedPictureSession,
+} from "./assessment-session";
 
 const SESSION_STORAGE_KEY = "grammar_police_assessment_session_v2";
 export const MAX_QUESTIONS = 8;
 export const ASSESSMENT_CHECKPOINTS = [3, 6] as const;
-const INITIAL_QUESTION = "Can you describe what you see in this picture?";
-
-function createInitialSession(
-  selectedPictureFilename: PictureFilename,
-): AssessmentSession {
-  return {
-    selectedPictureFilename,
-    focusTopic: null,
-    questionsAndAnswers: [
-      {
-        number: 1,
-        question: INITIAL_QUESTION,
-        questionType: "picture_follow_up",
-        answer: null,
-        answerMode: null,
-        assessment: null,
-      },
-    ],
-  };
-}
-
 function saveSession(session: AssessmentSession) {
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
 export function useAssessmentSession(initialPictureFilename: PictureFilename) {
   const [session, setSession] = useState<AssessmentSession>(() =>
-    createInitialSession(initialPictureFilename),
+    createInitialAssessmentSession(initialPictureFilename),
   );
 
   useEffect(() => {
@@ -111,10 +94,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     setSession((currentSession) => {
       const currentTurn = currentSession.questionsAndAnswers.at(-1);
 
-      if (
-        !currentTurn?.assessment ||
-        currentSession.questionsAndAnswers.length >= MAX_QUESTIONS
-      ) {
+      if (!currentTurn?.assessment || currentTurn.number >= MAX_QUESTIONS) {
         return currentSession;
       }
 
@@ -123,7 +103,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
         questionsAndAnswers: [
           ...currentSession.questionsAndAnswers,
           {
-            number: currentSession.questionsAndAnswers.length + 1,
+            number: currentTurn.number + 1,
             question: currentTurn.assessment.nextQuestion,
             questionType: currentTurn.assessment.nextQuestionType,
             answer: null,
@@ -137,10 +117,39 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     });
   }, []);
 
+  const switchPicture = useCallback(() => {
+    setSession((currentSession) => {
+      const currentTurn = currentSession.questionsAndAnswers.at(-1);
+
+      if (!currentTurn) {
+        return currentSession;
+      }
+
+      const viewedPictures = currentSession.viewedPictureFilenames ?? [
+        ...(currentSession.previousPictureSessions ?? []).map(
+          (pictureSession) => pictureSession.selectedPictureFilename,
+        ),
+        currentSession.selectedPictureFilename,
+      ];
+
+      if (new Set(viewedPictures).size >= 5) {
+        return currentSession;
+      }
+
+      const nextSession = createSwitchedPictureSession(
+        currentSession,
+        selectRandomPictureFilename(viewedPictures),
+      );
+
+      saveSession(nextSession);
+      return nextSession;
+    });
+  }, []);
+
   const resetSession = useCallback(() => {
     setSession((currentSession) => {
-      const nextSession = createInitialSession(
-        selectRandomPictureFilename(currentSession.selectedPictureFilename),
+      const nextSession = createInitialAssessmentSession(
+        selectRandomPictureFilename([currentSession.selectedPictureFilename]),
       );
       saveSession(nextSession);
       return nextSession;
@@ -151,6 +160,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     session,
     recordResult,
     advanceToNextQuestion,
+    switchPicture,
     resetSession,
   };
 }

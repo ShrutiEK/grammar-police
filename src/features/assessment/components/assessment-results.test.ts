@@ -20,8 +20,10 @@ function renderAssessmentResults(
   return renderToStaticMarkup(
     createElement(AssessmentResults, {
       assessment,
+      canChangePicture: true,
       isCheckpoint: true,
       isFinalQuestion: false,
+      onChangePicture: vi.fn(),
       onContinue: vi.fn(),
       onShowFeedback: vi.fn(),
       pendingAction,
@@ -33,7 +35,7 @@ describe("AssessmentResults", () => {
   it("disables both checkpoint actions while feedback is being prepared", () => {
     const markup = renderAssessmentResults("feedback");
 
-    expect(markup.match(/disabled=""/g)).toHaveLength(2);
+    expect(markup.match(/disabled=""/g)).toHaveLength(3);
     expect(markup).toContain(
       "Looking across your conversation and preparing your feedback",
     );
@@ -43,7 +45,7 @@ describe("AssessmentResults", () => {
   it("shows progress while preparing the next question", () => {
     const markup = renderAssessmentResults("continue");
 
-    expect(markup.match(/disabled=""/g)).toHaveLength(2);
+    expect(markup.match(/disabled=""/g)).toHaveLength(3);
     expect(markup).toContain("Getting your next question ready");
   });
 
@@ -52,5 +54,13 @@ describe("AssessmentResults", () => {
 
     expect(markup).not.toContain('disabled=""');
     expect(markup).not.toContain('role="status"');
+  });
+
+  it("offers a picture change without removing the checkpoint actions", () => {
+    const markup = renderAssessmentResults(null);
+
+    expect(markup).toContain("Keep talking");
+    expect(markup).toContain("Change picture");
+    expect(markup).toContain("See my feedback");
   });
 });

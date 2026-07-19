@@ -1,31 +1,37 @@
 import type { LearnerAssessment } from "../assessment.schema";
 
-export type AssessmentCtaAction = "continue" | "feedback";
+export type AssessmentCtaAction = "change-picture" | "continue" | "feedback";
 
 type AssessmentResultsProperties = Readonly<{
   assessment: LearnerAssessment;
+  canChangePicture: boolean;
   isCheckpoint: boolean;
   isFinalQuestion: boolean;
   pendingAction: AssessmentCtaAction | null;
   onContinue: () => void;
+  onChangePicture: () => void;
   onShowFeedback: () => void;
 }>;
 
 export function AssessmentResults({
   assessment,
+  canChangePicture,
   isCheckpoint,
   isFinalQuestion,
   pendingAction,
   onContinue,
+  onChangePicture,
   onShowFeedback,
 }: AssessmentResultsProperties) {
   const isBusy = pendingAction !== null;
   const progressMessage =
     pendingAction === "feedback"
       ? "Looking across your conversation and preparing your feedback…"
-      : pendingAction === "continue"
-        ? "Getting your next question ready…"
-        : null;
+      : pendingAction === "change-picture"
+        ? "Saving this conversation and choosing a new picture…"
+        : pendingAction === "continue"
+          ? "Getting your next question ready…"
+          : null;
 
   return (
     <section
@@ -53,7 +59,9 @@ export function AssessmentResults({
             See my conversation feedback →
           </button>
         ) : isCheckpoint ? (
-          <div className="grid gap-2.5 sm:grid-cols-2">
+          <div
+            className={`grid gap-2.5 ${canChangePicture ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+          >
             <button
               className="primary-button w-full cursor-pointer bg-support text-ink"
               disabled={isBusy}
@@ -62,6 +70,16 @@ export function AssessmentResults({
             >
               Keep talking →
             </button>
+            {canChangePicture && (
+              <button
+                className="primary-button w-full cursor-pointer bg-surface text-ink"
+                disabled={isBusy}
+                onClick={onChangePicture}
+                type="button"
+              >
+                Change picture →
+              </button>
+            )}
             <button
               className="primary-button w-full cursor-pointer"
               disabled={isBusy}
@@ -72,14 +90,26 @@ export function AssessmentResults({
             </button>
           </div>
         ) : (
-          <button
-            className="primary-button w-full cursor-pointer"
-            disabled={isBusy}
-            onClick={onContinue}
-            type="button"
-          >
-            Continue conversation →
-          </button>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <button
+              className="primary-button w-full cursor-pointer"
+              disabled={isBusy}
+              onClick={onContinue}
+              type="button"
+            >
+              Continue conversation →
+            </button>
+            {canChangePicture && (
+              <button
+                className="primary-button w-full cursor-pointer bg-surface text-ink"
+                disabled={isBusy}
+                onClick={onChangePicture}
+                type="button"
+              >
+                Change picture →
+              </button>
+            )}
+          </div>
         )}
 
         {progressMessage && (

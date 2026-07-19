@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
+import type { StudentRecordingTranscription } from "@/features/assessment/student-answer-provider.types";
+
 import { requestSarvam, SarvamApiError } from "./sarvam.client";
 
 const transcriptionResponseSchema = z.object({
@@ -50,16 +52,6 @@ const synchronousMaximumDurationInSeconds = 30;
 const transcriptionLanguageCode = "unknown";
 const transcriptionMode = "codemix";
 const transcriptionModel = "saaras:v3";
-
-export type StudentRecordingTranscription =
-  | Readonly<{
-      status: "completed";
-      transcript: string;
-    }>
-  | Readonly<{
-      status: "processing";
-      jobId: string;
-    }>;
 
 function getCleanAudio(audioFile: File) {
   // Strip codec metadata (e.g., ";codecs=opus") to ensure Sarvam accepts it.

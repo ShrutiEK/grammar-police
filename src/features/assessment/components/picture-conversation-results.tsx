@@ -3,6 +3,7 @@ import type { PictureConversationAssessment } from "../picture-conversation.sche
 type PictureConversationResultsProperties = Readonly<{
   assessment: PictureConversationAssessment;
   canContinueConversation?: boolean;
+  canStartNewPicture?: boolean;
   hasSpokenAnswers: boolean;
   hasWrittenAnswers: boolean;
   nextConversationPrompt?: string;
@@ -33,6 +34,7 @@ const metricLabel = {
 export function PictureConversationResults({
   assessment,
   canContinueConversation = true,
+  canStartNewPicture = true,
   hasSpokenAnswers,
   hasWrittenAnswers,
   nextConversationPrompt,
@@ -173,13 +175,15 @@ export function PictureConversationResults({
             Keep talking about this picture →
           </button>
         )}
-        <button
-          className="primary-button cursor-pointer bg-surface text-ink"
-          onClick={onStartNewAssessment}
-          type="button"
-        >
-          Try a new picture →
-        </button>
+        {canStartNewPicture && (
+          <button
+            className="primary-button cursor-pointer bg-surface text-ink"
+            onClick={onStartNewAssessment}
+            type="button"
+          >
+            Try a new picture →
+          </button>
+        )}
         <button
           className="primary-button cursor-pointer "
           onClick={onContinueLearning}
