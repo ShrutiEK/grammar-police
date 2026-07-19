@@ -27,6 +27,8 @@ describe("PictureConversationResults", () => {
             track: "expression",
           },
         },
+        hasSpokenAnswers: true,
+        hasWrittenAnswers: false,
         onContinueConversation: vi.fn(),
         onContinueLearning: vi.fn(),
         onStartNewAssessment: vi.fn(),
@@ -38,7 +40,39 @@ describe("PictureConversationResults", () => {
     expect(markup).toContain(
       "Audio-aware pronunciation feedback is on the way.",
     );
-    expect(markup).toContain("0 of 7 observed");
+    expect(markup).toContain("0 of 6 observed");
+  });
+
+  it("shows spelling feedback instead of pronunciation for written answers", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PictureConversationResults, {
+        assessment: {
+          learnerSummary: "You shared clear ideas.",
+          metrics: METRIC_IDS.map((id) => ({
+            confidence: "low" as const,
+            evidence: [],
+            id,
+            status: "not_assessed" as const,
+            unavailableReason: "We need another example.",
+          })),
+          primaryRecommendation: {
+            reason: "Practise adding one more detail.",
+            skill: "detail_expansion",
+            track: "expression",
+          },
+        },
+        hasSpokenAnswers: false,
+        hasWrittenAnswers: true,
+        onContinueConversation: vi.fn(),
+        onContinueLearning: vi.fn(),
+        onStartNewAssessment: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("Spelling and writing");
+    expect(markup).not.toContain("Pronunciation");
+    expect(markup).not.toContain("Speaking flow");
+    expect(markup).toContain("0 of 6 observed");
   });
 
   it("labels a learning map combined from multiple pictures", () => {
@@ -59,6 +93,8 @@ describe("PictureConversationResults", () => {
             track: "expression",
           },
         },
+        hasSpokenAnswers: false,
+        hasWrittenAnswers: true,
         nextConversationPrompt: "Tell me about a similar experience.",
         onContinueConversation: vi.fn(),
         onContinueLearning: vi.fn(),

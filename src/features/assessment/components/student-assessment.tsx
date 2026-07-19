@@ -25,7 +25,10 @@ import {
   loadPictureConversationFeedbackForInput,
   savePictureConversationFeedback,
 } from "../picture-conversation-storage";
-import type { PictureConversationFeedback } from "../picture-conversation.schema";
+import type {
+  PictureConversationFeedback,
+  PictureConversationProgress,
+} from "../picture-conversation.schema";
 import { getRecordingStatusMessage } from "../recording-status";
 import {
   ASSESSMENT_CHECKPOINTS,
@@ -62,9 +65,9 @@ export function StudentAssessment({
   >(() =>
     typeof window === "undefined" ? [] : loadPictureAssessmentHistory(),
   );
-  const [learningHandoffMessage, setLearningHandoffMessage] = useState<
-    string | null
-  >(null);
+  const [feedbackProgress, setFeedbackProgress] =
+    useState<PictureConversationProgress | null>(null);
+  const [, setLearningHandoffMessage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTranscribingLongRecording, setIsTranscribingLongRecording] =
     useState(false);
@@ -93,6 +96,8 @@ export function StudentAssessment({
     resetSession();
     setAssessmentError(null);
     setFeedback(null);
+    setFeedbackProgress(null);
+    setLearningHandoffMessage(null);
     setIsTranscribingLongRecording(false);
     setPendingCtaAction(null);
     setWrittenAnswer("");
@@ -156,6 +161,11 @@ export function StudentAssessment({
     });
     setAssessmentError(null);
     setPendingCtaAction("feedback");
+    setFeedbackProgress({
+      completedMetricIds: [],
+      stage: "reading",
+      totalMetrics: 0,
+    });
 
     try {
       logAssessmentProgress("building feedback input");
@@ -170,7 +180,9 @@ export function StudentAssessment({
       }
 
       logAssessmentProgress("no matching feedback found; requesting analysis");
-      const response = await requestPictureConversationFeedback(input);
+      const response = await requestPictureConversationFeedback(input, {
+        onProgress: setFeedbackProgress,
+      });
 
       if (response.status === "retry_later") {
         logAssessmentProgress("feedback provider asked learner to retry later");
@@ -194,6 +206,7 @@ export function StudentAssessment({
         "We couldn’t finish your feedback right now. Please try again in a moment.",
       );
     } finally {
+      setFeedbackProgress(null);
       setPendingCtaAction(null);
       logAssessmentProgress("feedback request finished");
     }
@@ -304,6 +317,12 @@ export function StudentAssessment({
               feedback.nextConversationPrompt
             }
             pictureCount={cumulativeAttempts.length}
+            hasSpokenAnswers={session.questionsAndAnswers.some(
+              (turn) => turn.answerMode === "spoken",
+            )}
+            hasWrittenAnswers={session.questionsAndAnswers.some(
+              (turn) => turn.answerMode === "written",
+            )}
             onContinueConversation={() => {
               setFeedback(null);
               continueToNextQuestion();
@@ -354,26 +373,25 @@ export function StudentAssessment({
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
           <PicturePromptCard prompt={currentPrompt} />
-          {pendingCtaAction !== "feedback" && (
-            <RecordingPanel
-              assessmentError={assessmentError}
-              hasResult={currentResult !== null}
-              isAnalyzing={isAnalyzing}
-              isTranscribingLongRecording={isTranscribingLongRecording}
-              isPreparing={recordingState === "requesting-permission"}
-              isRecording={recordingState === "recording"}
-              question={currentTurn.question}
-              questionNumber={currentTurn.number}
-              recording={recording}
-              statusMessage={getRecordingStatusMessage(recordingState)}
-              writtenAnswer={writtenAnswer}
-              onAnalyzeRecording={() => submitAnswer("spoken")}
-              onStartRecording={startRecording}
-              onStopRecording={stopRecording}
-              onSubmitWrittenAnswer={() => submitAnswer("written")}
-              onWrittenAnswerChange={setWrittenAnswer}
-            />
-          )}
+          <RecordingPanel
+            assessmentError={assessmentError}
+            feedbackProgress={feedbackProgress}
+            hasResult={currentResult !== null}
+            isAnalyzing={isAnalyzing}
+            isTranscribingLongRecording={isTranscribingLongRecording}
+            isPreparing={recordingState === "requesting-permission"}
+            isRecording={recordingState === "recording"}
+            question={currentTurn.question}
+            questionNumber={currentTurn.number}
+            recording={recording}
+            statusMessage={getRecordingStatusMessage(recordingState)}
+            writtenAnswer={writtenAnswer}
+            onAnalyzeRecording={() => submitAnswer("spoken")}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onSubmitWrittenAnswer={() => submitAnswer("written")}
+            onWrittenAnswerChange={setWrittenAnswer}
+          />
         </div>
 
         {currentResult && (

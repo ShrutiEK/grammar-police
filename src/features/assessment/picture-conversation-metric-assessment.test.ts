@@ -120,6 +120,38 @@ describe("picture conversation per-metric assessment", () => {
     expect(assessMetric).toHaveBeenCalledTimes(6);
   });
 
+  it("reports each calculated metric before summarizing the assessment", async () => {
+    const reportProgress = vi.fn();
+
+    await assessPictureConversationMetricsIndividually(
+      writtenInput,
+      {
+        assessMetric: async (metricId) => createMetric(metricId),
+        providerName: "Test provider",
+      },
+      reportProgress,
+    );
+
+    expect(reportProgress).toHaveBeenNthCalledWith(1, {
+      completedMetricIds: [],
+      stage: "calculating",
+      totalMetrics: 6,
+    });
+    expect(reportProgress).toHaveBeenCalledWith({
+      completedMetricIds: [
+        "scene_understanding",
+        "grammar",
+        "vocabulary",
+        "expression",
+        "conversation",
+        "writing_conventions",
+      ],
+      stage: "summarizing",
+      totalMetrics: 6,
+    });
+    expect(reportProgress).toHaveBeenCalledTimes(8);
+  });
+
   it("keeps partial results when another metric call fails", async () => {
     const assessment = await assessPictureConversationMetricsIndividually(
       writtenInput,

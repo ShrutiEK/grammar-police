@@ -71,7 +71,10 @@ describe("picture conversation provider fallback", () => {
     });
 
     expect(result).toEqual(assessment);
-    expect(assessWithOpenAi).toHaveBeenCalledWith(sampleAssessmentInput);
+    expect(assessWithOpenAi).toHaveBeenCalledWith(
+      sampleAssessmentInput,
+      expect.any(Function),
+    );
   });
 
   it("returns an error when neither provider can complete the assessment", async () => {
