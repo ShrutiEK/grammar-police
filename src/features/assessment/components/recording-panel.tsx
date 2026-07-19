@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { AudioRecording } from "@/features/recording/recording.types";
 
 import type { PictureConversationProgress } from "../picture-conversation.schema";
@@ -12,7 +14,6 @@ type RecordingPanelProperties = Readonly<{
   isPreparing: boolean;
   isRecording: boolean;
   question: string;
-  questionNumber: number;
   recording: AudioRecording | null;
   statusMessage: string;
   writtenAnswer: string;
@@ -32,7 +33,6 @@ export function RecordingPanel({
   isPreparing,
   isRecording,
   question,
-  questionNumber,
   recording,
   statusMessage,
   writtenAnswer,
@@ -42,7 +42,10 @@ export function RecordingPanel({
   onSubmitWrittenAnswer,
   onWrittenAnswerChange,
 }: RecordingPanelProperties) {
+  const [answerMode, setAnswerMode] = useState<"spoken" | "written">("spoken");
   const hasWrittenAnswer = writtenAnswer.trim().length > 0;
+  const canChangeAnswerMode =
+    !recording && !hasResult && !isAnalyzing && !isRecording;
 
   return (
     <aside
@@ -56,7 +59,9 @@ export function RecordingPanel({
       ) : (
         <>
           <div>
-            <p className="section-eyebrow mb-2">Prompt {questionNumber} of 8</p>
+            <p className="section-eyebrow mb-2">
+              Your next conversation prompt
+            </p>
             <h2
               className="text-xl leading-snug font-bold text-ink sm:text-2xl"
               id="recording-panel-title"
@@ -68,32 +73,79 @@ export function RecordingPanel({
               your ideas.
             </p>
 
-            <div className="mt-4 flex flex-col items-center text-center">
-              <button
-                aria-describedby="recording-status"
-                aria-label={isRecording ? "Stop recording" : "Start recording"}
-                aria-pressed={isRecording}
-                className={`grid size-16 place-items-center rounded-full border-2 border-ink text-2xl shadow-[4px_4px_0_#17213d] transition-all enabled:hover:-translate-y-1 enabled:active:translate-y-0 disabled:cursor-wait sm:size-18 ${
-                  isRecording
-                    ? "animate-bounce bg-[#ff8b7b]"
-                    : "bg-[#ffbd3e] hover:bg-[#ffe39a]"
-                }`}
-                disabled={
-                  isPreparing || isAnalyzing || hasResult || hasWrittenAnswer
-                }
-                onClick={isRecording ? onStopRecording : onStartRecording}
-                type="button"
+            {!recording && !hasResult && (
+              <div
+                aria-label="Choose how to answer"
+                className="answer-mode-switch mt-4"
+                role="group"
               >
-                {isRecording ? "■" : "🎙️"}
-              </button>
-              <p
-                aria-live="polite"
-                className="mt-3 min-h-8 text-base leading-relaxed font-semibold text-muted"
-                id="recording-status"
-              >
-                {hasResult ? "Your feedback is ready." : statusMessage}
-              </p>
-            </div>
+                <button
+                  aria-pressed={answerMode === "spoken"}
+                  className="answer-mode-option"
+                  disabled={!canChangeAnswerMode}
+                  onClick={() => setAnswerMode("spoken")}
+                  type="button"
+                >
+                  <span aria-hidden="true">🎙</span> Speak
+                </button>
+                <button
+                  aria-pressed={answerMode === "written"}
+                  className="answer-mode-option"
+                  disabled={!canChangeAnswerMode}
+                  onClick={() => setAnswerMode("written")}
+                  type="button"
+                >
+                  <span aria-hidden="true">✎</span> Write
+                </button>
+              </div>
+            )}
+
+            {(answerMode === "spoken" || recording) && (
+              <div className="mt-5 flex flex-col items-center text-center">
+                <div
+                  className={`recording-orbit ${isRecording ? "is-listening" : ""}`}
+                >
+                  <span className="recording-ring recording-ring-one" />
+                  <span className="recording-ring recording-ring-two" />
+                  <button
+                    aria-describedby="recording-status"
+                    aria-label={
+                      isRecording ? "Stop recording" : "Start recording"
+                    }
+                    aria-pressed={isRecording}
+                    className={`recording-button ${
+                      isRecording ? "is-recording" : ""
+                    }`}
+                    disabled={isPreparing || isAnalyzing || hasResult}
+                    onClick={isRecording ? onStopRecording : onStartRecording}
+                    type="button"
+                  >
+                    <span aria-hidden="true">{isRecording ? "■" : "🎙️"}</span>
+                  </button>
+                </div>
+                {isRecording && (
+                  <div
+                    aria-hidden="true"
+                    className="mt-4 flex h-7 items-center gap-1"
+                  >
+                    {Array.from({ length: 7 }, (_, index) => (
+                      <span
+                        className="sound-bar"
+                        key={index}
+                        style={{ animationDelay: `${index * 80}ms` }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <p
+                  aria-live="polite"
+                  className="mt-3 min-h-8 text-base leading-relaxed font-semibold text-muted"
+                  id="recording-status"
+                >
+                  {hasResult ? "Your feedback is ready." : statusMessage}
+                </p>
+              </div>
+            )}
 
             {recording && (
               <div className="mt-3 rounded-xl border-2 border-support bg-canvas p-3">
@@ -113,16 +165,8 @@ export function RecordingPanel({
               </div>
             )}
 
-            {!recording && (
-              <div className="my-3 flex items-center gap-3" aria-hidden="true">
-                <span className="h-px flex-1 bg-ink/20" />
-                <span className="text-base font-bold text-muted">or write</span>
-                <span className="h-px flex-1 bg-ink/20" />
-              </div>
-            )}
-
-            {!recording && (
-              <div>
+            {!recording && answerMode === "written" && (
+              <div className="mt-5 animate-[answer-in_280ms_ease-out]">
                 <label
                   className="text-base font-bold text-ink"
                   htmlFor="written-answer"
@@ -138,14 +182,16 @@ export function RecordingPanel({
                   onChange={(event) =>
                     onWrittenAnswerChange(event.target.value)
                   }
-                  placeholder="For example: I can see people playing in a park."
+                  placeholder="Start with the detail that caught your eye…"
                   value={writtenAnswer}
                 />
                 <p
                   className="mt-2 text-base text-muted"
                   id="written-answer-help"
                 >
-                  Use complete English sentences. Maximum 5,000 characters.
+                  {hasWrittenAnswer
+                    ? "Great start. Add one more detail if you can."
+                    : "A complete sentence is a perfect place to begin."}
                 </p>
               </div>
             )}
@@ -168,7 +214,7 @@ export function RecordingPanel({
             </button>
           )}
 
-          {!recording && !hasResult && (
+          {!recording && !hasResult && answerMode === "written" && (
             <button
               aria-busy={isAnalyzing}
               className="primary-button mt-4 w-full cursor-pointer"

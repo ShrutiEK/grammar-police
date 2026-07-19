@@ -1,4 +1,8 @@
+import Image from "next/image";
+
 import type { PictureConversationAssessment } from "../picture-conversation.schema";
+import { MetricIllustration } from "./metric-illustration";
+import { BandMeter, bandLabel, RatingSystem } from "./rating-system";
 
 type PictureConversationResultsProperties = Readonly<{
   assessment: PictureConversationAssessment;
@@ -13,13 +17,6 @@ type PictureConversationResultsProperties = Readonly<{
   onStartNewAssessment: () => void;
 }>;
 
-const bandLabel = {
-  developing: "Growing",
-  emerging: "Just starting",
-  secure: "Getting steady",
-  strong: "Strong",
-} as const;
-
 const metricLabel = {
   conversation: "Conversation",
   expression: "Sharing ideas",
@@ -30,6 +27,51 @@ const metricLabel = {
   vocabulary: "Word choice",
   writing_conventions: "Spelling and writing",
 } as const;
+
+const skillLabel = (skill: string) => skill.replaceAll("_", " ");
+
+function MetricGrowth({
+  metric,
+}: Readonly<{ metric: PictureConversationAssessment["metrics"][number] }>) {
+  if (metric.findingStatus === "no_gap") {
+    return null;
+  }
+
+  const evidence = metric.evidence[0];
+  const observation = evidence?.observation;
+  const focusSkill = metric.nextSkill
+    ? skillLabel(metric.nextSkill)
+    : metric.unmappedSkill;
+
+  if (!observation && !focusSkill) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl bg-accent-soft p-3 text-ink">
+      <p className="font-bold text-eyebrow">
+        <span aria-hidden="true">🌱 </span>To grow
+      </p>
+      {observation && (
+        <p className="mt-1 text-base leading-relaxed">{observation}</p>
+      )}
+      {evidence?.correctedText && (
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          <span className="italic">“{evidence.learnerText}”</span>{" "}
+          <span aria-hidden="true">→</span>{" "}
+          <span className="font-semibold text-ink">
+            “{evidence.correctedText}”
+          </span>
+        </p>
+      )}
+      {focusSkill && (
+        <p className="mt-2 text-sm font-semibold text-muted">
+          Practise {focusSkill}.
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function PictureConversationResults({
   assessment,
@@ -74,20 +116,32 @@ export function PictureConversationResults({
 
   return (
     <section className="space-y-8 rounded-[2rem] border-[3px] border-ink bg-surface p-6 shadow-card sm:p-10">
-      <header>
-        <p className="section-eyebrow">Your English highlights</p>
-        <h2 className="text-3xl font-bold text-ink">
-          A great conversation! 🌟
-        </h2>
-        <p className="mt-4 max-w-5xl text-lg leading-relaxed text-muted">
-          {assessment.learnerSummary}
-        </p>
-        {pictureCount > 1 && (
-          <p className="mt-2 text-base font-semibold text-eyebrow">
-            Highlights from {pictureCount} pictures
+      <header className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+        <div>
+          <p className="section-eyebrow">Your English highlights</p>
+          <h2 className="text-3xl font-bold text-ink">
+            A great conversation! 🌟
+          </h2>
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-muted">
+            {assessment.learnerSummary}
           </p>
-        )}
+          {pictureCount > 1 && (
+            <p className="mt-2 text-base font-semibold text-eyebrow">
+              Highlights from {pictureCount} pictures
+            </p>
+          )}
+        </div>
+        <Image
+          alt="Learners exploring language together around an open book"
+          className="h-auto w-full rounded-3xl border-2 border-ink object-cover"
+          height={1024}
+          priority
+          src="/images/learning-progress-illustration.png"
+          width={1536}
+        />
       </header>
+
+      <RatingSystem />
 
       <section aria-labelledby="english-highlights-heading">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
@@ -106,25 +160,38 @@ export function PictureConversationResults({
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {assessedMetrics.map((metric) => (
             <article
-              className="rounded-2xl border-2 border-ink bg-canvas p-5"
+              className="grid gap-4 rounded-3xl border-2 border-ink bg-canvas p-4"
               key={metric.id}
             >
-              <p className="text-lg font-bold text-ink">
-                {metricLabel[metric.id]}
-              </p>
-              <p className="mt-1 text-xl font-bold text-ink">
-                {bandLabel[metric.band!]}
-              </p>
-              {metric.strength && (
-                <p className="mt-2 text-lg text-muted">{metric.strength}</p>
-              )}
+              <MetricIllustration metricId={metric.id} />
+              <div>
+                <p className="font-bold text-muted">{metricLabel[metric.id]}</p>
+                <p className="text-xl font-bold text-ink">
+                  {bandLabel[metric.band!]}
+                </p>
+              </div>
+              <BandMeter band={metric.band!} />
+              <div className="grid gap-2.5">
+                {metric.strength && (
+                  <p className="text-base leading-relaxed text-muted">
+                    <span className="font-bold text-ink">
+                      <span aria-hidden="true">🌟 </span>Strength:{" "}
+                    </span>
+                    {metric.strength}
+                  </p>
+                )}
+                <MetricGrowth metric={metric} />
+              </div>
             </article>
           ))}
           {hasSpokenAnswers && (
-            <article className="rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5">
-              <p className="text-lg font-bold text-ink">Pronunciation</p>
-              <p className="mt-1 text-lg font-bold text-ink">Coming soon</p>
-              <p className="mt-2 text-lg text-muted">
+            <article className="grid gap-3 rounded-3xl border-2 border-dashed border-ink/35 bg-canvas p-4">
+              <MetricIllustration metricId="pronunciation" />
+              <div>
+                <p className="font-bold text-muted">Pronunciation</p>
+                <p className="text-xl font-bold text-ink">Coming soon</p>
+              </div>
+              <p className="text-base leading-relaxed text-muted">
                 Audio-aware pronunciation feedback is on the way.
               </p>
             </article>
@@ -132,9 +199,11 @@ export function PictureConversationResults({
         </div>
 
         {notAssessedMetrics.length > 0 && (
-          <div className="mt-5 rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5 sm:p-6">
-            <p className="font-bold text-ink">More examples needed</p>
-            <ul className="mt-2 grid gap-2 text-lg text-muted sm:grid-cols-2">
+          <details className="mt-5 rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5 sm:p-6">
+            <summary className="cursor-pointer font-bold text-ink">
+              More examples needed ({notAssessedMetrics.length})
+            </summary>
+            <ul className="mt-3 grid gap-3 text-base text-muted sm:grid-cols-2">
               {notAssessedMetrics.map((metric) => (
                 <li key={metric.id}>
                   <span className="font-semibold text-ink">
@@ -145,19 +214,30 @@ export function PictureConversationResults({
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         )}
       </section>
 
-      <div className="rounded-2xl border-2 border-ink bg-accent-soft p-6">
-        <p className="text-lg font-bold text-eyebrow">Try this next</p>
-        <p className="mt-1 text-xl font-bold text-ink">
-          {assessment.primaryRecommendation.skill.replaceAll("_", " ")}
-        </p>
-        <p className="mt-3 text-lg leading-relaxed text-muted">
-          {assessment.primaryRecommendation.reason}
-        </p>
-      </div>
+      {assessment.primaryRecommendation ? (
+        <div className="rounded-2xl border-2 border-ink bg-accent-soft p-6">
+          <p className="text-lg font-bold text-eyebrow">Try this next</p>
+          <p className="mt-1 text-xl font-bold text-ink">
+            {assessment.primaryRecommendation.skill.replaceAll("_", " ")}
+          </p>
+          <p className="mt-3 text-lg leading-relaxed text-muted">
+            {assessment.primaryRecommendation.reason}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border-2 border-ink bg-support p-6">
+          <p className="text-xl font-bold text-ink">
+            No single learning gap stood out
+          </p>
+          <p className="mt-2 text-lg text-muted">
+            Try another picture when you are ready to share more English.
+          </p>
+        </div>
+      )}
 
       {nextConversationPrompt && (
         <p className="rounded-2xl bg-canvas p-5 text-lg leading-relaxed text-muted">
@@ -184,13 +264,15 @@ export function PictureConversationResults({
             Try a new picture →
           </button>
         )}
-        <button
-          className="primary-button cursor-pointer "
-          onClick={onContinueLearning}
-          type="button"
-        >
-          Try your next challenge →
-        </button>
+        {assessment.primaryRecommendation && (
+          <button
+            className="primary-button cursor-pointer "
+            onClick={onContinueLearning}
+            type="button"
+          >
+            Try your next challenge →
+          </button>
+        )}
       </div>
     </section>
   );

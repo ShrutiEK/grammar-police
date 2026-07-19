@@ -294,30 +294,26 @@ Provider adapters must return typed intermediate data, not raw provider payloads
 
 ### Recommended model routing
 
-The initial metric-analysis recommendation is Sarvam `sarvam-30b`. It matches
-the existing application integration and is suitable for low-latency, structured
-assessment of typed responses and speech transcripts. Use strict JSON Schema
-output, a low temperature, and no visible reasoning output.
+Picture metrics use two independent structured-output providers. OpenAI is the
+primary evaluator and Gemini is the cross-provider fallback. Sarvam remains the
+speech transcription provider for the current prototype.
 
-| Role                                 | Provider and model              | Use when                                                                                      |
-| ------------------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------- |
-| Primary metric evaluator             | Sarvam `sarvam-30b`             | Default assessment of picture-conversation turns.                                             |
-| Same-provider quality fallback       | Sarvam `sarvam-105b`            | The primary model returns an invalid/insufficient structured assessment after one safe retry. |
-| Cross-provider fallback              | OpenAI `gpt-5-mini`             | Sarvam is unavailable, times out, or returns an invalid structured assessment.                |
-| Additional cross-provider option     | Groq `openai/gpt-oss-20b`       | Future cost-sensitive option after its provider adapter is added.                             |
-| Higher-quality cross-provider option | Groq `llama-3.3-70b-versatile`  | Future benchmarking or complex evaluations where latency/cost is acceptable.                  |
-| Primary transcription                | Sarvam `saaras:v3`              | Existing English speech-to-text integration. Request timestamps when fluency is in scope.     |
-| Transcription fallback               | OpenAI `gpt-4o-mini-transcribe` | Sarvam fails before returning a transcript; preserve the spoken language and original script. |
+| Role                     | Provider and model        | Use when                                                                     |
+| ------------------------ | ------------------------- | ---------------------------------------------------------------------------- |
+| Primary metric evaluator | OpenAI `gpt-5.6-sol`      | Default high-quality evidence classification for picture-conversation turns. |
+| Cross-provider fallback  | Gemini `gemini-3.5-flash` | OpenAI is unavailable or cannot produce a valid evidence-backed result.      |
+| Primary transcription    | Sarvam `saaras:v3`        | Current English speech-to-text integration; request reliable metadata.       |
 
 This routing is a starting configuration, not a claim that one provider is best
 for every learner. Retain the same input, rubric, and output schema across all
 evaluators, then benchmark them against teacher-labelled attempts before changing
 the default.
 
-Only trigger a model fallback for a transport failure, timeout, provider error,
-invalid schema, or explicitly unreliable transcription. Do not change models
-because an assessment band seems surprising, and never merge scores from two
-providers into one attempt.
+Fallback is evaluated independently for each metric. Trigger it for a transport
+failure, timeout, provider error, invalid schema, or a failed deterministic
+evidence rule such as an article recommendation whose correction does not
+change `a`, `an`, or `the`. Preserve valid primary-provider metrics and never
+merge two provider results for the same metric.
 
 ```ts
 type TranscriptionResult = {
@@ -337,9 +333,20 @@ type AssessmentProvider = {
 ```
 
 The provider evaluates one eligible metric per request. Each response is one
-small, fixed object with no metric array or optional properties. Run no more than
-two metric requests concurrently. Preserve successful partial results when
+small, fixed object with no metric array or optional properties. Run no more
+than two metric requests concurrently. Preserve successful partial results when
 another metric request fails.
+
+Every assessed metric classifies its learning finding as:
+
+- `supported`: evidence maps to a typed learning skill and may route a lesson;
+- `unmapped`: a meaningful concept is observed but the taxonomy does not cover
+  it, so it remains visible evidence and cannot route a lesson;
+- `no_gap`: the evidence supports a band and strength but no learning gap;
+- `not_assessed`: evidence is insufficient or unreliable.
+
+An assessed metric does not require a next skill. If no `supported` finding is
+available, the application does not fabricate a primary recommendation.
 
 The application determines eligibility before requesting providers:
 
@@ -376,6 +383,11 @@ The prompt must explicitly forbid: scoring punctuation in speech transcripts,
 scoring pronunciation without audio-aware evidence, inventing scene facts,
 diagnosing personality/confidence, exposing hidden reasoning, and returning
 English-language feedback that is age-inappropriate.
+
+For spoken transcripts, likely contractions without apostrophes are ASR
+formatting, not grammar evidence. Article recommendations must change a decision
+involving `a`, `an`, or `the` in the corrected evidence. Forms of `be`, including
+`is`, are verbs and can never independently support an article recommendation.
 
 ## Learner-facing presentation
 

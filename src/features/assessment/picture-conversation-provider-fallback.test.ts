@@ -1,95 +1,76 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type {
-  PictureConversationAssessment,
   PictureConversationAssessmentInput,
+  PictureConversationMetricResult,
 } from "./picture-conversation.schema";
-import { assessWithProviderFallback } from "./picture-conversation-provider-fallback";
+import { assessMetricWithProviderFallback } from "./picture-conversation-provider-fallback";
 import { samplePictureConversation } from "./sample-picture-conversation.data";
 
-const sampleAssessmentInput: PictureConversationAssessmentInput = {
+const input: PictureConversationAssessmentInput = {
   pictureDescription:
-    "Families are having a picnic in a park while two children fly a red kite.",
+    "Families are having a picnic while two children fly a kite.",
   turns: samplePictureConversation.turns,
 };
 
-const assessment: PictureConversationAssessment = {
-  learnerSummary: "You described the picture clearly.",
-  metrics: [
+const metric: PictureConversationMetricResult = {
+  band: "strong",
+  confidence: "high",
+  evidence: [
     {
-      band: "secure",
-      confidence: "high",
-      evidence: [
-        {
-          learnerText: "children are playing football",
-          observation: "Describes a clear action.",
-          turn: "scene_description",
-        },
-      ],
-      id: "scene_understanding",
-      status: "assessed",
+      learnerText: "The children are flying a kite.",
+      observation: "The sentence is clear.",
+      turn: "scene_description",
     },
   ],
-  primaryRecommendation: {
-    reason: "More location words can make descriptions clearer.",
-    skill: "spatial_language",
-    track: "scene_description",
-  },
+  findingStatus: "no_gap",
+  id: "grammar",
+  status: "assessed",
+  strength: "You formed a clear sentence.",
 };
 
-function createProvider(response: Promise<PictureConversationAssessment>) {
-  return vi.fn<
-    (
-      input: PictureConversationAssessmentInput,
-    ) => Promise<PictureConversationAssessment>
-  >(() => response);
-}
-
-describe("picture conversation provider fallback", () => {
-  it("uses Sarvam when its assessment succeeds", async () => {
-    const assessWithSarvam = createProvider(Promise.resolve(assessment));
-    const assessWithOpenAi = createProvider(Promise.resolve(assessment));
-
-    const result = await assessWithProviderFallback(sampleAssessmentInput, {
-      assessWithOpenAi,
-      assessWithSarvam,
-    });
-
-    expect(result).toEqual(assessment);
-    expect(assessWithOpenAi).not.toHaveBeenCalled();
-  });
-
-  it("uses OpenAI when Sarvam cannot complete the assessment", async () => {
-    const assessWithSarvam = createProvider(
-      Promise.reject(new Error("Sarvam is unavailable.")),
-    );
-    const assessWithOpenAi = createProvider(Promise.resolve(assessment));
-
-    const result = await assessWithProviderFallback(sampleAssessmentInput, {
-      assessWithOpenAi,
-      assessWithSarvam,
-    });
-
-    expect(result).toEqual(assessment);
-    expect(assessWithOpenAi).toHaveBeenCalledWith(
-      sampleAssessmentInput,
-      expect.any(Function),
-    );
-  });
-
-  it("returns an error when neither provider can complete the assessment", async () => {
-    const assessWithSarvam = createProvider(
-      Promise.reject(new Error("Sarvam is unavailable.")),
-    );
-    const assessWithOpenAi = createProvider(
-      Promise.reject(new Error("OpenAI is unavailable.")),
-    );
+describe("picture conversation metric provider fallback", () => {
+  it("uses OpenAI when the metric is valid", async () => {
+    const assessWithOpenAi = vi.fn().mockResolvedValue(metric);
+    const assessWithGemini = vi.fn().mockResolvedValue(metric);
 
     await expect(
-      assessWithProviderFallback(sampleAssessmentInput, {
+      assessMetricWithProviderFallback("grammar", input, {
+        assessWithGemini,
         assessWithOpenAi,
-        assessWithSarvam,
       }),
-    ).rejects.toThrow("OpenAI is unavailable.");
+    ).resolves.toEqual(metric);
+    expect(assessWithGemini).not.toHaveBeenCalled();
+  });
+
+  it("uses Gemini when an OpenAI metric is invalid", async () => {
+    const assessWithOpenAi = vi
+      .fn()
+      .mockRejectedValue(new Error("Invalid article evidence."));
+    const assessWithGemini = vi.fn().mockResolvedValue(metric);
+
+    await expect(
+      assessMetricWithProviderFallback("grammar", input, {
+        assessWithGemini,
+        assessWithOpenAi,
+      }),
+    ).resolves.toEqual(metric);
+    expect(assessWithGemini).toHaveBeenCalledWith("grammar", input);
+  });
+
+  it("returns the Gemini error when both providers fail", async () => {
+    const assessWithOpenAi = vi
+      .fn()
+      .mockRejectedValue(new Error("OpenAI is unavailable."));
+    const assessWithGemini = vi
+      .fn()
+      .mockRejectedValue(new Error("Gemini is unavailable."));
+
+    await expect(
+      assessMetricWithProviderFallback("grammar", input, {
+        assessWithGemini,
+        assessWithOpenAi,
+      }),
+    ).rejects.toThrow("Gemini is unavailable.");
   });
 });

@@ -31,14 +31,17 @@ Install dependencies:
 pnpm install
 ```
 
-Copy the environment template to enable Sarvam transcription and assessment:
+Copy the environment template to enable provider-backed transcription and
+assessment:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Keep `SARVAM_API_KEY` server-side. The application shell can run without it,
-but real assessments require the key.
+Keep every API key server-side. Sarvam currently handles speech transcription
+and conversation follow-ups. OpenAI is the primary picture-metrics evaluator,
+with Gemini as its structured-output fallback. The application shell can run
+without provider keys, but real spoken conversations and metrics require them.
 
 ## Development
 

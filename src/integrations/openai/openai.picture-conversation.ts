@@ -3,23 +3,21 @@ import "server-only";
 import { z } from "zod";
 
 import { logAssessmentProgress } from "@/features/assessment/assessment-progress-log";
-import { assessPictureConversationMetricsIndividually } from "@/features/assessment/picture-conversation-metric-assessment";
 import {
   createPictureConversationProviderMetricSchema,
   parsePictureConversationProviderMetric,
   type AssessableMetricId,
-  type PictureConversationAssessment,
   type PictureConversationAssessmentInput,
-  type ReportPictureConversationProgress,
 } from "@/features/assessment/picture-conversation.schema";
 import { parseStructuredChatCompletion } from "@/integrations/structured-chat-completion";
 import { createPictureConversationPrompt } from "@/prompts/assessment/create-picture-conversation-prompt";
+import { validateMetricFinding } from "@/features/assessment/validate-metric-finding";
 
 import { requestOpenAi } from "./openai.client";
 
-const openAiAssessmentModel = "gpt-5-mini";
+const openAiAssessmentModel = "gpt-5.6-sol";
 
-async function assessMetricWithOpenAi(
+export async function assessMetricWithOpenAi(
   metricId: AssessableMetricId,
   input: PictureConversationAssessmentInput,
 ) {
@@ -61,19 +59,7 @@ async function assessMetricWithOpenAi(
     metricId,
   });
 
-  return parsePictureConversationProviderMetric(metricId, providerMetric);
-}
-
-export async function assessPictureConversationWithOpenAi(
-  input: PictureConversationAssessmentInput,
-  reportProgress?: ReportPictureConversationProgress,
-): Promise<PictureConversationAssessment> {
-  return assessPictureConversationMetricsIndividually(
-    input,
-    {
-      assessMetric: assessMetricWithOpenAi,
-      providerName: "OpenAI",
-    },
-    reportProgress,
+  return validateMetricFinding(
+    parsePictureConversationProviderMetric(metricId, providerMetric),
   );
 }

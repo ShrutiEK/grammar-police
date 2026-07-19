@@ -41,6 +41,7 @@ import {
   AssessmentResults,
   type AssessmentCtaAction,
 } from "./assessment-results";
+import { ConversationTrail } from "./conversation-trail";
 import { ConversationHistory } from "./conversation-history";
 import { PictureConversationResults } from "./picture-conversation-results";
 import { PicturePromptCard } from "./picture-prompt-card";
@@ -111,6 +112,8 @@ export function StudentAssessment({
   const isCheckpoint = ASSESSMENT_CHECKPOINTS.some(
     (checkpoint) => checkpoint === currentTurn.number,
   );
+  const canContinueConversation =
+    session.questionsAndAnswers.length < MAX_QUESTIONS;
 
   function resetAssessment() {
     logAssessmentProgress("new assessment requested");
@@ -372,6 +375,16 @@ export function StudentAssessment({
       logAssessmentProgress("answer assessment saved", {
         questionNumber: currentTurn.number,
       });
+
+      // Normal turns flow straight into the next question. Checkpoints and the
+      // final question keep the results card so the learner can choose to keep
+      // talking or see their feedback.
+      if (canContinueConversation && !isCheckpoint) {
+        continueToNextQuestion();
+        logAssessmentProgress("advanced to next question automatically", {
+          nextQuestionNumber: currentTurn.number + 1,
+        });
+      }
     } catch (error) {
       logAssessmentProgress("answer assessment failed", {
         errorName: error instanceof Error ? error.name : "UnknownError",
@@ -465,6 +478,10 @@ export function StudentAssessment({
           </p>
         </header>
 
+        <ConversationTrail
+          currentQuestionNumber={session.questionsAndAnswers.length}
+        />
+
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
           <PicturePromptCard
             canChangePicture={hasUnseenPicture && !currentResult}
@@ -487,7 +504,6 @@ export function StudentAssessment({
             isPreparing={recordingState === "requesting-permission"}
             isRecording={recordingState === "recording"}
             question={currentTurn.question}
-            questionNumber={currentTurn.number}
             recording={recording}
             statusMessage={getRecordingStatusMessage(recordingState)}
             writtenAnswer={writtenAnswer}
@@ -504,7 +520,7 @@ export function StudentAssessment({
             assessment={currentResult.assessment}
             canChangePicture={hasUnseenPicture}
             isCheckpoint={isCheckpoint}
-            isFinalQuestion={currentTurn.number >= MAX_QUESTIONS}
+            isFinalQuestion={!canContinueConversation}
             pendingAction={pendingCtaAction}
             onChangePicture={changePictureDuringAssessment}
             onContinue={prepareNextQuestion}
