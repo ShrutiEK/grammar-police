@@ -189,4 +189,33 @@ describe("picture conversation per-metric assessment", () => {
       }),
     ).rejects.toThrow("did not return an assessed metric");
   });
+
+  it("does not force a recommendation when assessed evidence shows no gap", async () => {
+    const assessment = await assessPictureConversationMetricsIndividually(
+      writtenInput,
+      {
+        assessMetric: async (metricId) => ({
+          band: "strong",
+          confidence: "high",
+          evidence: [
+            {
+              learnerText: "Two children are flying a kite.",
+              observation: "The response is accurate and clear.",
+              turn: "scene_description",
+            },
+          ],
+          findingStatus: "no_gap",
+          id: metricId,
+          status: "assessed",
+          strength: "You communicated this clearly.",
+        }),
+        providerName: "Test provider",
+      },
+    );
+
+    expect(assessment.primaryRecommendation).toBeUndefined();
+    expect(assessment.learnerSummary).toContain(
+      "No single learning gap stood out",
+    );
+  });
 });

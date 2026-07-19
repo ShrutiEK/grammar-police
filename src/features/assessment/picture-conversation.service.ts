@@ -1,12 +1,13 @@
 import "server-only";
 
-import { assessPictureConversationWithOpenAi } from "@/integrations/openai/openai.picture-conversation";
-import { assessPictureConversation } from "@/integrations/sarvam/sarvam.picture-conversation";
+import { assessMetricWithGemini } from "@/integrations/gemini/gemini.picture-conversation";
+import { assessMetricWithOpenAi } from "@/integrations/openai/openai.picture-conversation";
 import { pictureDescriptions } from "@/picture-descriptions/picture-descriptions.data";
 
 import { logAssessmentProgress } from "./assessment-progress-log";
 import { createPictureConversationFeedback } from "./picture-conversation-feedback";
-import { assessWithProviderFallback } from "./picture-conversation-provider-fallback";
+import { assessPictureConversationMetricsIndividually } from "./picture-conversation-metric-assessment";
+import { assessMetricWithProviderFallback } from "./picture-conversation-provider-fallback";
 import type {
   PictureConversationFeedback,
   PictureConversationInput,
@@ -31,14 +32,18 @@ export async function assessSubmittedPictureConversation(
   logAssessmentProgress("trusted picture description loaded", {
     pictureFilename: input.pictureFilename,
   });
-  const assessment = await assessWithProviderFallback(
+  const assessment = await assessPictureConversationMetricsIndividually(
     {
       pictureDescription,
       turns: input.turns,
     },
     {
-      assessWithOpenAi: assessPictureConversationWithOpenAi,
-      assessWithSarvam: assessPictureConversation,
+      assessMetric: (metricId, assessmentInput) =>
+        assessMetricWithProviderFallback(metricId, assessmentInput, {
+          assessWithGemini: assessMetricWithGemini,
+          assessWithOpenAi: assessMetricWithOpenAi,
+        }),
+      providerName: "OpenAI with Gemini fallback",
     },
     reportProgress,
   );

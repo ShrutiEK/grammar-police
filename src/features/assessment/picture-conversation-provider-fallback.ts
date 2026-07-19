@@ -1,19 +1,18 @@
 import type {
-  PictureConversationAssessment,
+  AssessableMetricId,
   PictureConversationAssessmentInput,
-  PictureConversationProgress,
-  ReportPictureConversationProgress,
+  PictureConversationMetricResult,
 } from "./picture-conversation.schema";
 import { logAssessmentProgress } from "./assessment-progress-log";
 
-type AssessPictureConversation = (
+type AssessMetric = (
+  metricId: AssessableMetricId,
   input: PictureConversationAssessmentInput,
-  reportProgress?: ReportPictureConversationProgress,
-) => Promise<PictureConversationAssessment>;
+) => Promise<PictureConversationMetricResult>;
 
-type PictureConversationAssessmentProviders = Readonly<{
-  assessWithOpenAi: AssessPictureConversation;
-  assessWithSarvam: AssessPictureConversation;
+type MetricAssessmentProviders = Readonly<{
+  assessWithGemini: AssessMetric;
+  assessWithOpenAi: AssessMetric;
 }>;
 
 function getErrorSummary(error: unknown) {
@@ -22,61 +21,27 @@ function getErrorSummary(error: unknown) {
     : String(error);
 }
 
-export async function assessWithProviderFallback(
+export async function assessMetricWithProviderFallback(
+  metricId: AssessableMetricId,
   input: PictureConversationAssessmentInput,
-  {
-    assessWithOpenAi,
-    assessWithSarvam,
-  }: PictureConversationAssessmentProviders,
-  reportProgress?: ReportPictureConversationProgress,
+  { assessWithGemini, assessWithOpenAi }: MetricAssessmentProviders,
 ) {
-  let totalMetrics = 0;
-  const forwardProgress = (progress: PictureConversationProgress) => {
-    totalMetrics = progress.totalMetrics;
-    reportProgress?.(progress);
-  };
-
-  logAssessmentProgress("Sarvam assessment started");
-
   try {
-    const assessment = await assessWithSarvam(input, forwardProgress);
-    logAssessmentProgress("Sarvam assessment succeeded");
-    return assessment;
-  } catch (sarvamError) {
-    reportProgress?.({
-      completedMetricIds: [],
-      stage: "retrying",
-      totalMetrics,
-    });
+    return await assessWithOpenAi(metricId, input);
+  } catch (openAiError) {
     logAssessmentProgress(
-      "Sarvam assessment failed; starting OpenAI fallback",
+      "OpenAI metric failed semantic or structural validation; starting Gemini fallback",
       {
         errorName:
-          sarvamError instanceof Error ? sarvamError.name : "UnknownError",
+          openAiError instanceof Error ? openAiError.name : "UnknownError",
+        metricId,
       },
     );
-    console.error(
-      "Sarvam picture-conversation assessment failed; trying OpenAI fallback.",
-      getErrorSummary(sarvamError),
-    );
+    console.error("OpenAI metric assessment failed; trying Gemini fallback.", {
+      error: getErrorSummary(openAiError),
+      metricId,
+    });
 
-    try {
-      const assessment = await assessWithOpenAi(input, forwardProgress);
-      logAssessmentProgress("OpenAI fallback assessment succeeded");
-      return assessment;
-    } catch (openAiError) {
-      logAssessmentProgress("OpenAI fallback assessment failed", {
-        errorName:
-          openAiError instanceof Error ? openAiError.name : "UnknownError",
-      });
-      console.error(
-        "Picture-conversation assessment failed with both providers.",
-        {
-          openAiError: getErrorSummary(openAiError),
-          sarvamError: getErrorSummary(sarvamError),
-        },
-      );
-      throw openAiError;
-    }
+    return assessWithGemini(metricId, input);
   }
 }

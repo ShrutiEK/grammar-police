@@ -12,7 +12,7 @@ const metricGuidance = {
   expression:
     "Assess complete ideas, connected sentences, clarity, development, and useful detail. Do not assess accent or formatting.",
   grammar:
-    "Assess sentence formation, verbs, articles, plurals, agreement, prepositions, pronouns, and question forms.",
+    "Assess sentence formation, verbs, articles, plurals, agreement, prepositions, pronouns, and question forms. Articles means only a, an, the, or a valid zero-article choice around a noun phrase.",
   scene_understanding:
     "Assess visible people, objects, actions, and relationships against the trusted picture description. Do not use personal answers as scene evidence.",
   spoken_fluency:
@@ -114,11 +114,27 @@ Use only these next skills for this metric: ${JSON.stringify(METRIC_NEXT_SKILLS[
 
 Every field is required.
 - metricId must be ${metricId}.
-- When there is enough reliable evidence, use an assessed band and fill evidenceQuote, evidenceTurn, observation, nextSkill, and strength. Set unavailableReason to an empty string.
-- When evidence is insufficient, set band to not_assessed, nextSkill and evidenceTurn to none, leave evidenceQuote, observation, and strength empty, and give a brief unavailableReason.
+- findingStatus must be supported only when the evidence clearly maps to one allowed nextSkill.
+- Use findingStatus unmapped when there is a meaningful learning need but none of the allowed next skills describes it. Set nextSkill to none and name the concept briefly in unmappedSkill.
+- Use findingStatus no_gap when the evidence supports a band but does not justify a learning need. Set nextSkill to none and leave unmappedSkill empty.
+- For supported and unmapped findings, correctedText must show a natural corrected version of evidenceQuote.
+- For no_gap, leave correctedText empty.
+- When evidence is insufficient, set band and findingStatus to not_assessed, set nextSkill and evidenceTurn to none, leave correctedText, evidenceQuote, observation, strength, and unmappedSkill empty, and give a brief unavailableReason.
+- For every assessed result, fill evidenceQuote, evidenceTurn, observation, and strength, and set unavailableReason to an empty string.
 - evidenceQuote must be a short exact quote from the learner.
 - observation and strength must be kind, specific, and no more than 20 words each.
 - Do not treat non-English content as weak English.
 - Assess observable communication only, never personality or intelligence.
-- Keep all generated text in English and age-neutral.`;
+- Keep all generated text in English and age-neutral.
+
+Spoken-transcript safeguards:
+- Speech-to-text may omit apostrophes, punctuation, and capitalisation. Never treat those formatting omissions as spoken grammar or writing evidence.
+- In spoken turns, interpret shes, hes, im, youre, theyre, dont, doesnt, didnt, cant, wont, and similar forms as probable contractions when the sentence context supports that reading.
+- "Shes playing" in a spoken transcript is probable "She's playing" and is not evidence of an article or auxiliary-verb error.
+- "She playing" may support present_continuous because the auxiliary "is" is absent. "Is" is a verb, never an article.
+
+Strict article classification:
+- Recommend articles only when the evidence identifies a decision involving a, an, the, or zero article around a specific noun phrase.
+- Apostrophes, contractions, forms of be such as is/am/are, spelling, and punctuation can never independently support articles.
+- A single ambiguous transcription artifact is not reliable evidence for any learning recommendation.`;
 }
