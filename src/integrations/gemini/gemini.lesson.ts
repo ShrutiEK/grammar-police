@@ -12,7 +12,7 @@ import { createAdaptiveExercisePrompt } from "@/prompts/lesson/create-adaptive-e
 
 import { createGeminiInteraction } from "./gemini.client";
 
-const geminiExerciseModel = "gemini-2.5-flash";
+const geminiExerciseModel = "gemini-3.5-flash";
 
 export async function generateAdaptiveExerciseWithGemini(
   input: GenerateAdaptiveExerciseRequest,
