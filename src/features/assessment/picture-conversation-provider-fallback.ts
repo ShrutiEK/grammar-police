@@ -1,11 +1,14 @@
 import type {
   PictureConversationAssessment,
   PictureConversationAssessmentInput,
+  PictureConversationProgress,
+  ReportPictureConversationProgress,
 } from "./picture-conversation.schema";
 import { logAssessmentProgress } from "./assessment-progress-log";
 
 type AssessPictureConversation = (
   input: PictureConversationAssessmentInput,
+  reportProgress?: ReportPictureConversationProgress,
 ) => Promise<PictureConversationAssessment>;
 
 type PictureConversationAssessmentProviders = Readonly<{
@@ -25,14 +28,26 @@ export async function assessWithProviderFallback(
     assessWithOpenAi,
     assessWithSarvam,
   }: PictureConversationAssessmentProviders,
+  reportProgress?: ReportPictureConversationProgress,
 ) {
+  let totalMetrics = 0;
+  const forwardProgress = (progress: PictureConversationProgress) => {
+    totalMetrics = progress.totalMetrics;
+    reportProgress?.(progress);
+  };
+
   logAssessmentProgress("Sarvam assessment started");
 
   try {
-    const assessment = await assessWithSarvam(input);
+    const assessment = await assessWithSarvam(input, forwardProgress);
     logAssessmentProgress("Sarvam assessment succeeded");
     return assessment;
   } catch (sarvamError) {
+    reportProgress?.({
+      completedMetricIds: [],
+      stage: "retrying",
+      totalMetrics,
+    });
     logAssessmentProgress(
       "Sarvam assessment failed; starting OpenAI fallback",
       {
@@ -46,7 +61,7 @@ export async function assessWithProviderFallback(
     );
 
     try {
-      const assessment = await assessWithOpenAi(input);
+      const assessment = await assessWithOpenAi(input, forwardProgress);
       logAssessmentProgress("OpenAI fallback assessment succeeded");
       return assessment;
     } catch (openAiError) {

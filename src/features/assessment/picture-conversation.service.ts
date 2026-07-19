@@ -10,11 +10,18 @@ import { assessWithProviderFallback } from "./picture-conversation-provider-fall
 import type {
   PictureConversationFeedback,
   PictureConversationInput,
+  ReportPictureConversationProgress,
 } from "./picture-conversation.schema";
 
 export async function assessSubmittedPictureConversation(
   input: PictureConversationInput,
+  reportProgress?: ReportPictureConversationProgress,
 ): Promise<PictureConversationFeedback> {
+  reportProgress?.({
+    completedMetricIds: [],
+    stage: "reading",
+    totalMetrics: 0,
+  });
   logAssessmentProgress("feedback service started", {
     pictureFilename: input.pictureFilename,
     turnCount: input.turns.length,
@@ -33,6 +40,7 @@ export async function assessSubmittedPictureConversation(
       assessWithOpenAi: assessPictureConversationWithOpenAi,
       assessWithSarvam: assessPictureConversation,
     },
+    reportProgress,
   );
   logAssessmentProgress("provider assessment completed", {
     assessedMetricCount: assessment.metrics.filter(

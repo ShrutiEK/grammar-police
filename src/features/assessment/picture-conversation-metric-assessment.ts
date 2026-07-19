@@ -7,6 +7,7 @@ import {
   type PictureConversationAssessment,
   type PictureConversationAssessmentInput,
   type PictureConversationMetricResult,
+  type ReportPictureConversationProgress,
 } from "./picture-conversation.schema";
 
 type AssessMetric = (
@@ -232,11 +233,17 @@ function createAssessment(
 export async function assessPictureConversationMetricsIndividually(
   input: PictureConversationAssessmentInput,
   { assessMetric, providerName }: MetricAssessmentProvider,
+  reportProgress?: ReportPictureConversationProgress,
 ) {
   const metricIds = getEligiblePictureConversationMetricIds(input);
   const completedMetrics: PictureConversationMetricResult[] = [];
   const concurrency = 2;
 
+  reportProgress?.({
+    completedMetricIds: [],
+    stage: "calculating",
+    totalMetrics: metricIds.length,
+  });
   logAssessmentProgress(`${providerName} eligible metrics selected`, {
     metricIds,
   });
@@ -256,6 +263,11 @@ export async function assessPictureConversationMetricsIndividually(
 
       if (result.status === "fulfilled") {
         completedMetrics.push(result.value);
+        reportProgress?.({
+          completedMetricIds: completedMetrics.map((metric) => metric.id),
+          stage: "calculating",
+          totalMetrics: metricIds.length,
+        });
         logAssessmentProgress(`${providerName} metric completed`, {
           metricId,
           metricStatus: result.value.status,
@@ -272,6 +284,11 @@ export async function assessPictureConversationMetricsIndividually(
   }
 
   const assessment = createAssessment(input, completedMetrics);
+  reportProgress?.({
+    completedMetricIds: completedMetrics.map((metric) => metric.id),
+    stage: "summarizing",
+    totalMetrics: metricIds.length,
+  });
   logAssessmentProgress(`${providerName} metric results combined`, {
     assessedMetricCount: assessment.metrics.filter(
       (metric) => metric.status === "assessed",

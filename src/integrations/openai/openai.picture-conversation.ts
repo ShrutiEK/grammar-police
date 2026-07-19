@@ -10,6 +10,7 @@ import {
   type AssessableMetricId,
   type PictureConversationAssessment,
   type PictureConversationAssessmentInput,
+  type ReportPictureConversationProgress,
 } from "@/features/assessment/picture-conversation.schema";
 import { parseStructuredChatCompletion } from "@/integrations/structured-chat-completion";
 import { createPictureConversationPrompt } from "@/prompts/assessment/create-picture-conversation-prompt";
@@ -65,9 +66,14 @@ async function assessMetricWithOpenAi(
 
 export async function assessPictureConversationWithOpenAi(
   input: PictureConversationAssessmentInput,
+  reportProgress?: ReportPictureConversationProgress,
 ): Promise<PictureConversationAssessment> {
-  return assessPictureConversationMetricsIndividually(input, {
-    assessMetric: assessMetricWithOpenAi,
-    providerName: "OpenAI",
-  });
+  return assessPictureConversationMetricsIndividually(
+    input,
+    {
+      assessMetric: assessMetricWithOpenAi,
+      providerName: "OpenAI",
+    },
+    reportProgress,
+  );
 }

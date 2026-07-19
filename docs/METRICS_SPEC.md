@@ -388,8 +388,26 @@ The default result view shows:
 4. Optional “Why?” details with short learner quotes and corrections.
 5. Skill states rather than a dense list of numeric scores.
 
-Show pronunciation as **Coming soon**, separately from unavailable assessment
-results. Do not use error count as the primary learner-facing metric.
+When a conversation contains speech, show pronunciation as **Coming soon**,
+separately from unavailable assessment results. For written-only conversations,
+show spelling and writing feedback instead of a pronunciation card. Mixed
+conversations may show both. Do not use error count as the primary
+learner-facing metric.
+
+While feedback is being prepared, keep the existing question-and-answer panel
+mounted so the page does not jump. Hide only its question and answer controls,
+then show typed progress inside the same panel:
+
+1. reading the conversation;
+2. calculating the eligible metrics, including the real completed and total
+   count;
+3. retrying through the configured fallback when necessary; and
+4. summarizing the evidence into the learning map.
+
+Progress counts must come from completed metric requests rather than a timer.
+The API streams validated progress events followed by exactly one final
+assessment or retry response. The learner UI may name completed areas, but must
+not expose providers, raw errors, hidden reasoning, or unconfirmed results.
 
 ## Test matrix
 

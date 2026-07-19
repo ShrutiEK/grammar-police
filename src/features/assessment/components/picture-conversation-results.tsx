@@ -3,6 +3,8 @@ import type { PictureConversationAssessment } from "../picture-conversation.sche
 type PictureConversationResultsProperties = Readonly<{
   assessment: PictureConversationAssessment;
   canContinueConversation?: boolean;
+  hasSpokenAnswers: boolean;
+  hasWrittenAnswers: boolean;
   nextConversationPrompt?: string;
   pictureCount?: number;
   onContinueConversation: () => void;
@@ -25,27 +27,47 @@ const metricLabel = {
   scene_understanding: "Understanding the picture",
   spoken_fluency: "Speaking flow",
   vocabulary: "Word choice",
-  writing_conventions: "Writing details",
+  writing_conventions: "Spelling and writing",
 } as const;
 
 export function PictureConversationResults({
   assessment,
   canContinueConversation = true,
+  hasSpokenAnswers,
+  hasWrittenAnswers,
   nextConversationPrompt,
   pictureCount = 1,
   onContinueConversation,
   onContinueLearning,
   onStartNewAssessment,
 }: PictureConversationResultsProperties) {
+  const metricAppliesToConversation = (
+    metric: PictureConversationAssessment["metrics"][number],
+  ) => {
+    if (metric.id === "pronunciation") {
+      return false;
+    }
+
+    if (metric.id === "spoken_fluency") {
+      return hasSpokenAnswers;
+    }
+
+    if (metric.id === "writing_conventions") {
+      return hasWrittenAnswers;
+    }
+
+    return true;
+  };
   const assessedMetrics = assessment.metrics.filter(
-    (metric) => metric.status === "assessed",
+    (metric) =>
+      metric.status === "assessed" && metricAppliesToConversation(metric),
   );
   const notAssessedMetrics = assessment.metrics.filter(
     (metric) =>
-      metric.status === "not_assessed" && metric.id !== "pronunciation",
+      metric.status === "not_assessed" && metricAppliesToConversation(metric),
   );
   const availableMetricCount = assessment.metrics.filter(
-    (metric) => metric.id !== "pronunciation",
+    metricAppliesToConversation,
   ).length;
 
   return (
@@ -93,15 +115,17 @@ export function PictureConversationResults({
               )}
             </article>
           ))}
-          <article className="rounded-2xl border-2 border-dashed border-ink/35 bg-[#fffaf0] p-4">
-            <p className="text-xs font-bold uppercase text-muted">
-              Pronunciation
-            </p>
-            <p className="mt-1 text-lg font-bold text-ink">Coming soon</p>
-            <p className="mt-2 text-sm text-muted">
-              Audio-aware pronunciation feedback is on the way.
-            </p>
-          </article>
+          {hasSpokenAnswers && (
+            <article className="rounded-2xl border-2 border-dashed border-ink/35 bg-[#fffaf0] p-4">
+              <p className="text-xs font-bold uppercase text-muted">
+                Pronunciation
+              </p>
+              <p className="mt-1 text-lg font-bold text-ink">Coming soon</p>
+              <p className="mt-2 text-sm text-muted">
+                Audio-aware pronunciation feedback is on the way.
+              </p>
+            </article>
+          )}
         </div>
 
         {notAssessedMetrics.length > 0 && (

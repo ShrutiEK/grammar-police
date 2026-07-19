@@ -95,6 +95,20 @@ const learningSkillSchema = z.enum(LEARNING_SKILLS);
 
 export type MetricId = z.infer<typeof metricIdSchema>;
 
+export const pictureConversationProgressSchema = z.object({
+  completedMetricIds: z.array(metricIdSchema).max(METRIC_IDS.length),
+  stage: z.enum(["reading", "calculating", "retrying", "summarizing"]),
+  totalMetrics: z.number().int().min(0).max(METRIC_IDS.length),
+});
+
+export type PictureConversationProgress = z.infer<
+  typeof pictureConversationProgressSchema
+>;
+
+export type ReportPictureConversationProgress = (
+  progress: PictureConversationProgress,
+) => void;
+
 const metricEvidenceSchema = z.object({
   learnerText: z.string().trim().min(1).max(300),
   observation: z.string().trim().min(1).max(240),
@@ -326,10 +340,28 @@ export const pictureConversationResponseSchema = z.discriminatedUnion(
   [pictureConversationFeedbackSchema, pictureConversationRetrySchema],
 );
 
+export const pictureConversationStreamEventSchema = z.discriminatedUnion(
+  "type",
+  [
+    z.object({
+      progress: pictureConversationProgressSchema,
+      type: z.literal("progress"),
+    }),
+    z.object({
+      response: pictureConversationResponseSchema,
+      type: z.literal("result"),
+    }),
+  ],
+);
+
 export type PictureConversationFeedback = z.infer<
   typeof pictureConversationFeedbackSchema
 >;
 
 export type PictureConversationResponse = z.infer<
   typeof pictureConversationResponseSchema
+>;
+
+export type PictureConversationStreamEvent = z.infer<
+  typeof pictureConversationStreamEventSchema
 >;
