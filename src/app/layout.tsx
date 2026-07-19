@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible } from "next/font/google";
+import {
+  Atkinson_Hyperlegible_Next,
+} from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AccessibilityToolkit } from "@/features/accessibility/accessibility-toolkit";
 
 import "./globals.css";
 
-const atkinsonHyperlegible = Atkinson_Hyperlegible({
+const atkinsonHyperlegible = Atkinson_Hyperlegible_Next({
   display: "swap",
   subsets: ["latin"],
   variable: "--font-atkinson-hyperlegible",
-  weight: ["400", "700"],
+  weight: "variable",
 });
 
 export const metadata: Metadata = {
