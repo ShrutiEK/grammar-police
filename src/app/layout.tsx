@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
+  icons: {
+    icon: {
+      url: "/images/lingojungle_logo.svg",
+      type: "image/svg+xml",
+    },
+    shortcut: "/images/lingojungle_logo.svg",
+  },
   keywords: [...siteConfig.keywords],
   category: "education",
   alternates: {
