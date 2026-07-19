@@ -1,4 +1,8 @@
+import Image from "next/image";
+
 import type { PictureConversationAssessment } from "../picture-conversation.schema";
+import { MetricIllustration } from "./metric-illustration";
+import { BandMeter, bandLabel, RatingSystem } from "./rating-system";
 
 type PictureConversationResultsProperties = Readonly<{
   assessment: PictureConversationAssessment;
@@ -12,13 +16,6 @@ type PictureConversationResultsProperties = Readonly<{
   onContinueLearning: () => void;
   onStartNewAssessment: () => void;
 }>;
-
-const bandLabel = {
-  developing: "Growing",
-  emerging: "Just starting",
-  secure: "Getting steady",
-  strong: "Strong",
-} as const;
 
 const metricLabel = {
   conversation: "Conversation",
@@ -74,20 +71,32 @@ export function PictureConversationResults({
 
   return (
     <section className="space-y-8 rounded-[2rem] border-[3px] border-ink bg-surface p-6 shadow-card sm:p-10">
-      <header>
-        <p className="section-eyebrow">Your English highlights</p>
-        <h2 className="text-3xl font-bold text-ink">
-          A great conversation! 🌟
-        </h2>
-        <p className="mt-4 max-w-5xl text-lg leading-relaxed text-muted">
-          {assessment.learnerSummary}
-        </p>
-        {pictureCount > 1 && (
-          <p className="mt-2 text-base font-semibold text-eyebrow">
-            Highlights from {pictureCount} pictures
+      <header className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+        <div>
+          <p className="section-eyebrow">Your English highlights</p>
+          <h2 className="text-3xl font-bold text-ink">
+            A great conversation! 🌟
+          </h2>
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-muted">
+            {assessment.learnerSummary}
           </p>
-        )}
+          {pictureCount > 1 && (
+            <p className="mt-2 text-base font-semibold text-eyebrow">
+              Highlights from {pictureCount} pictures
+            </p>
+          )}
+        </div>
+        <Image
+          alt="Learners exploring language together around an open book"
+          className="h-auto w-full rounded-3xl border-2 border-ink object-cover"
+          height={1024}
+          priority
+          src="/images/learning-progress-illustration.png"
+          width={1536}
+        />
       </header>
+
+      <RatingSystem />
 
       <section aria-labelledby="english-highlights-heading">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
@@ -106,25 +115,32 @@ export function PictureConversationResults({
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {assessedMetrics.map((metric) => (
             <article
-              className="rounded-2xl border-2 border-ink bg-canvas p-5"
+              className="grid gap-4 rounded-3xl border-2 border-ink bg-canvas p-4"
               key={metric.id}
             >
-              <p className="text-lg font-bold text-ink">
-                {metricLabel[metric.id]}
-              </p>
-              <p className="mt-1 text-xl font-bold text-ink">
-                {bandLabel[metric.band!]}
-              </p>
+              <MetricIllustration metricId={metric.id} />
+              <div>
+                <p className="font-bold text-muted">{metricLabel[metric.id]}</p>
+                <p className="text-xl font-bold text-ink">
+                  {bandLabel[metric.band!]}
+                </p>
+              </div>
+              <BandMeter band={metric.band!} />
               {metric.strength && (
-                <p className="mt-2 text-lg text-muted">{metric.strength}</p>
+                <p className="text-base leading-relaxed text-muted">
+                  {metric.strength}
+                </p>
               )}
             </article>
           ))}
           {hasSpokenAnswers && (
-            <article className="rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5">
-              <p className="text-lg font-bold text-ink">Pronunciation</p>
-              <p className="mt-1 text-lg font-bold text-ink">Coming soon</p>
-              <p className="mt-2 text-lg text-muted">
+            <article className="grid gap-3 rounded-3xl border-2 border-dashed border-ink/35 bg-canvas p-4">
+              <MetricIllustration metricId="pronunciation" />
+              <div>
+                <p className="font-bold text-muted">Pronunciation</p>
+                <p className="text-xl font-bold text-ink">Coming soon</p>
+              </div>
+              <p className="text-base leading-relaxed text-muted">
                 Audio-aware pronunciation feedback is on the way.
               </p>
             </article>
@@ -132,9 +148,11 @@ export function PictureConversationResults({
         </div>
 
         {notAssessedMetrics.length > 0 && (
-          <div className="mt-5 rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5 sm:p-6">
-            <p className="font-bold text-ink">More examples needed</p>
-            <ul className="mt-2 grid gap-2 text-lg text-muted sm:grid-cols-2">
+          <details className="mt-5 rounded-2xl border-2 border-dashed border-ink/35 bg-canvas p-5 sm:p-6">
+            <summary className="cursor-pointer font-bold text-ink">
+              More examples needed ({notAssessedMetrics.length})
+            </summary>
+            <ul className="mt-3 grid gap-3 text-base text-muted sm:grid-cols-2">
               {notAssessedMetrics.map((metric) => (
                 <li key={metric.id}>
                   <span className="font-semibold text-ink">
@@ -145,7 +163,7 @@ export function PictureConversationResults({
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         )}
       </section>
 
