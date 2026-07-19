@@ -427,6 +427,22 @@ export type PictureConversationFeedback = z.infer<
   typeof pictureConversationFeedbackSchema
 >;
 
+// Conversation-keyed feedback cache (key = stringified normalized input).
+export const feedbackCacheSchema = z.record(
+  z.string(),
+  pictureConversationFeedbackSchema,
+);
+
+// One archived assessment attempt, and the capped cross-picture history.
+export const pictureAssessmentAttemptSchema = z.object({
+  feedback: pictureConversationFeedbackSchema,
+  input: pictureConversationInputSchema,
+});
+
+export const pictureAssessmentHistorySchema = pictureAssessmentAttemptSchema
+  .array()
+  .max(20);
+
 export type PictureConversationResponse = z.infer<
   typeof pictureConversationResponseSchema
 >;

@@ -3,12 +3,20 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { saveLessonAssessment } from "@/features/lesson/lesson-assessment-storage";
 import {
   pictureFilenames,
   picturePromptsByFilename,
 } from "@/features/picture-prompt/picture-prompt.data";
 import { useAudioRecorder } from "@/features/recording/use-audio-recorder";
+import {
+  hydrateFeedbackFromRemote,
+  syncedSavePictureConversationFeedback,
+} from "@/features/state-sync/feedback-sync";
+import {
+  reconcilePictureAssessmentHistory,
+  syncedArchivePictureAssessment,
+} from "@/features/state-sync/history-sync";
+import { syncedSaveLessonAssessment } from "@/features/state-sync/lesson-sync";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
 import { requestStudentAssessment } from "../assessment.client";
@@ -16,7 +24,6 @@ import { logAssessmentProgress } from "../assessment-progress-log";
 import { createCumulativePictureAssessment } from "../cumulative-picture-assessment";
 import { createPictureConversationInput } from "../create-picture-conversation-input";
 import {
-  archivePictureAssessment,
   loadPictureAssessmentHistory,
   mergePictureAssessmentAttempts,
   type PictureAssessmentAttempt,
@@ -25,7 +32,6 @@ import { requestPictureConversationFeedback } from "../picture-conversation.clie
 import {
   loadPictureConversationFeedback,
   loadPictureConversationFeedbackForInput,
-  savePictureConversationFeedback,
 } from "../picture-conversation-storage";
 import type {
   PictureConversationFeedback,
@@ -83,8 +89,15 @@ export function StudentAssessment({
   const [writtenAnswer, setWrittenAnswer] = useState("");
 
   useEffect(() => {
-    // Migrates feedback saved by the earlier sessionStorage version.
+    // Migrate feedback saved by the earlier sessionStorage version, then hydrate
+    // from Redis if this device has no local feedback yet.
     loadPictureConversationFeedback();
+    void hydrateFeedbackFromRemote();
+
+    // Merge the durable Redis history into the local mirror (two-device safe).
+    void reconcilePictureAssessmentHistory(
+      typeof window === "undefined" ? [] : loadPictureAssessmentHistory(),
+    ).then(setAssessmentHistory);
   }, []);
 
   const currentPrompt =
@@ -133,7 +146,7 @@ export function StudentAssessment({
       return assessmentHistory;
     }
 
-    return archivePictureAssessment({
+    return syncedArchivePictureAssessment({
       feedback,
       input: createPictureConversationInput(session),
     });
@@ -232,7 +245,7 @@ export function StudentAssessment({
           (metric) => metric.status === "assessed",
         ).length,
       });
-      savePictureConversationFeedback(input, response);
+      syncedSavePictureConversationFeedback(input, response);
       setFeedback(response);
       logAssessmentProgress("feedback displayed");
     } catch (error) {
@@ -288,11 +301,11 @@ export function StudentAssessment({
           return;
         }
 
-        savePictureConversationFeedback(input, response);
+        syncedSavePictureConversationFeedback(input, response);
         pictureFeedback = response;
       }
 
-      const nextHistory = archivePictureAssessment({
+      const nextHistory = syncedArchivePictureAssessment({
         feedback: pictureFeedback,
         input,
       });
@@ -441,7 +454,7 @@ export function StudentAssessment({
             }}
             onContinueLearning={() => {
               try {
-                saveLessonAssessment(cumulativeAssessment);
+                syncedSaveLessonAssessment(cumulativeAssessment);
                 router.push("/lesson");
               } catch {
                 setAssessmentError(
