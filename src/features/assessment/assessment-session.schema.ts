@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { learnerAssessmentSchema } from "./assessment.schema";
+import {
+  learnerAssessmentSchema,
+  questionTypeSchema,
+} from "./assessment.schema";
 
 export const pictureFilenameSchema = z.enum([
   "beach.png",
@@ -11,17 +14,18 @@ export const pictureFilenameSchema = z.enum([
 ]);
 
 export const conversationTurnSchema = z.object({
+  audioDurationInSeconds: z.number().positive().max(600).nullable().optional(),
   number: z.number().int().min(1).max(8),
   question: z.string().trim().min(1),
   answer: z.string().trim().min(1).nullable(),
   answerMode: z.enum(["spoken", "written"]).nullable(),
   assessment: learnerAssessmentSchema.nullable(),
+  questionType: questionTypeSchema.optional(),
 });
 
 export const assessmentSessionSchema = z.object({
   selectedPictureFilename: pictureFilenameSchema,
   focusTopic: z.string().trim().min(1).nullable(),
-  status: z.enum(["in_progress", "completed"]),
   questionsAndAnswers: z.array(conversationTurnSchema).min(1).max(8),
 });
 

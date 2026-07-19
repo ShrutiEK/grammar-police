@@ -1,22 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { picturePromptsByFilename } from "@/features/picture-prompt/picture-prompt.data";
 import { useAudioRecorder } from "@/features/recording/use-audio-recorder";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
 import { requestStudentAssessment } from "../assessment.client";
-import { calculateCumulativeScores } from "../cumulative-assessment";
+import { logAssessmentProgress } from "../assessment-progress-log";
+import { createPictureConversationInput } from "../create-picture-conversation-input";
+import { requestPictureConversationFeedback } from "../picture-conversation.client";
+import {
+  loadPictureConversationFeedback,
+  loadPictureConversationFeedbackForInput,
+  savePictureConversationFeedback,
+} from "../picture-conversation-storage";
+import type { PictureConversationFeedback } from "../picture-conversation.schema";
 import { getRecordingStatusMessage } from "../recording-status";
 import {
   ASSESSMENT_CHECKPOINTS,
+  MAX_QUESTIONS,
   useAssessmentSession,
 } from "../use-assessment-session";
-import { AssessmentCompletion } from "./assessment-completion";
-import { AssessmentResults } from "./assessment-results";
+import {
+  AssessmentResults,
+  type AssessmentCtaAction,
+} from "./assessment-results";
 import { ConversationHistory } from "./conversation-history";
+import { PictureConversationResults } from "./picture-conversation-results";
 import { PicturePromptCard } from "./picture-prompt-card";
 import { RecordingPanel } from "./recording-panel";
 
@@ -29,16 +41,26 @@ export function StudentAssessment({
 }: StudentAssessmentProperties) {
   const { recording, recordingState, startRecording, stopRecording, reset } =
     useAudioRecorder();
-  const {
-    session,
-    recordResult,
-    advanceToNextQuestion,
-    completeSession,
-    resetSession,
-  } = useAssessmentSession(initialPictureFilename);
+  const { session, recordResult, advanceToNextQuestion, resetSession } =
+    useAssessmentSession(initialPictureFilename);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<PictureConversationFeedback | null>(
+    null,
+  );
+  const [learningHandoffMessage, setLearningHandoffMessage] = useState<
+    string | null
+  >(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isTranscribingLongRecording, setIsTranscribingLongRecording] =
+    useState(false);
+  const [pendingCtaAction, setPendingCtaAction] =
+    useState<AssessmentCtaAction | null>(null);
   const [writtenAnswer, setWrittenAnswer] = useState("");
+
+  useEffect(() => {
+    // Migrates feedback saved by the earlier sessionStorage version.
+    loadPictureConversationFeedback();
+  }, []);
 
   const currentPrompt =
     picturePromptsByFilename[session.selectedPictureFilename];
@@ -47,25 +69,104 @@ export function StudentAssessment({
     currentTurn.answer && currentTurn.assessment
       ? { transcript: currentTurn.answer, assessment: currentTurn.assessment }
       : null;
-  const cumulativeScores = calculateCumulativeScores(
-    session.questionsAndAnswers,
-  );
   const isCheckpoint = ASSESSMENT_CHECKPOINTS.some(
     (checkpoint) => checkpoint === session.questionsAndAnswers.length,
   );
 
   function resetAssessment() {
+    logAssessmentProgress("new assessment requested");
     resetSession();
     setAssessmentError(null);
+    setFeedback(null);
+    setLearningHandoffMessage(null);
+    setIsTranscribingLongRecording(false);
+    setPendingCtaAction(null);
     setWrittenAnswer("");
     reset();
+    logAssessmentProgress("new assessment ready");
   }
 
   function continueToNextQuestion() {
     advanceToNextQuestion();
     setAssessmentError(null);
     setWrittenAnswer("");
+    setIsTranscribingLongRecording(false);
     reset();
+  }
+
+  async function prepareNextQuestion() {
+    if (pendingCtaAction) {
+      return;
+    }
+
+    logAssessmentProgress("continue conversation requested", {
+      currentQuestionNumber: currentTurn.number,
+    });
+    setPendingCtaAction("continue");
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 300);
+    });
+
+    continueToNextQuestion();
+    setPendingCtaAction(null);
+    logAssessmentProgress("next question ready", {
+      nextQuestionNumber: currentTurn.number + 1,
+    });
+  }
+
+  async function showConversationFeedback() {
+    if (pendingCtaAction) {
+      return;
+    }
+
+    logAssessmentProgress("feedback requested", {
+      pictureFilename: session.selectedPictureFilename,
+      turnCount: session.questionsAndAnswers.length,
+    });
+    setAssessmentError(null);
+    setPendingCtaAction("feedback");
+
+    try {
+      logAssessmentProgress("building feedback input");
+      const input = createPictureConversationInput(session);
+      logAssessmentProgress("checking feedback cache");
+      const savedFeedback = loadPictureConversationFeedbackForInput(input);
+
+      if (savedFeedback) {
+        logAssessmentProgress("matching feedback found in cache");
+        setFeedback(savedFeedback);
+        return;
+      }
+
+      logAssessmentProgress("no matching feedback found; requesting analysis");
+      const response = await requestPictureConversationFeedback(input);
+
+      if (response.status === "retry_later") {
+        logAssessmentProgress("feedback provider asked learner to retry later");
+        setAssessmentError(response.message);
+        return;
+      }
+
+      logAssessmentProgress("feedback received; saving result", {
+        assessedMetricCount: response.assessment.metrics.filter(
+          (metric) => metric.status === "assessed",
+        ).length,
+      });
+      savePictureConversationFeedback(input, response);
+      setFeedback(response);
+      logAssessmentProgress("feedback displayed");
+    } catch (error) {
+      logAssessmentProgress("feedback request failed", {
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      setAssessmentError(
+        "We couldn’t finish your feedback right now. Please try again in a moment.",
+      );
+    } finally {
+      setPendingCtaAction(null);
+      logAssessmentProgress("feedback request finished");
+    }
   }
 
   async function submitAnswer(answerMode: "spoken" | "written") {
@@ -79,6 +180,10 @@ export function StudentAssessment({
 
     setAssessmentError(null);
     setIsAnalyzing(true);
+    logAssessmentProgress("answer assessment requested", {
+      answerMode,
+      questionNumber: currentTurn.number,
+    });
 
     try {
       const conversationContext = session.questionsAndAnswers
@@ -88,16 +193,42 @@ export function StudentAssessment({
           question: turn.question,
           answer: turn.answer!,
         }));
-      const result = await requestStudentAssessment({
-        audioBlob: answerMode === "spoken" ? recording?.audioBlob : undefined,
-        writtenAnswer: answerMode === "written" ? writtenAnswer : undefined,
-        pictureFilename: session.selectedPictureFilename,
-        currentQuestion: currentTurn.question,
-        focusTopic: session.focusTopic,
-        conversationContext,
+      const result = await requestStudentAssessment(
+        {
+          audioBlob: answerMode === "spoken" ? recording?.audioBlob : undefined,
+          audioDurationInSeconds:
+            answerMode === "spoken" ? recording?.durationInSeconds : undefined,
+          writtenAnswer: answerMode === "written" ? writtenAnswer : undefined,
+          pictureFilename: session.selectedPictureFilename,
+          currentQuestion: currentTurn.question,
+          focusTopic: session.focusTopic,
+          conversationContext,
+        },
+        {
+          onBatchTranscriptionPending: () => {
+            logAssessmentProgress("long recording transcription is pending", {
+              questionNumber: currentTurn.number,
+            });
+            setIsTranscribingLongRecording(true);
+          },
+        },
+      );
+      logAssessmentProgress("answer assessment received", {
+        questionNumber: currentTurn.number,
       });
-      recordResult(result, answerMode);
+      recordResult(
+        result,
+        answerMode,
+        answerMode === "spoken" ? (recording?.durationInSeconds ?? null) : null,
+      );
+      logAssessmentProgress("answer assessment saved", {
+        questionNumber: currentTurn.number,
+      });
     } catch (error) {
+      logAssessmentProgress("answer assessment failed", {
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        questionNumber: currentTurn.number,
+      });
       setAssessmentError(
         error instanceof Error
           ? error.message
@@ -105,16 +236,41 @@ export function StudentAssessment({
       );
     } finally {
       setIsAnalyzing(false);
+      setIsTranscribingLongRecording(false);
+      logAssessmentProgress("answer assessment request finished", {
+        questionNumber: currentTurn.number,
+      });
     }
   }
 
-  if (session.status === "completed") {
+  if (feedback) {
     return (
-      <AssessmentCompletion
-        prompt={currentPrompt}
-        session={session}
-        onReset={resetAssessment}
-      />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
+        <section className="mx-auto max-w-4xl space-y-4">
+          <PictureConversationResults
+            assessment={feedback.assessment}
+            canContinueConversation={
+              session.questionsAndAnswers.length < MAX_QUESTIONS
+            }
+            nextConversationPrompt={feedback.nextConversationPrompt}
+            onContinueConversation={() => {
+              setFeedback(null);
+              continueToNextQuestion();
+            }}
+            onContinueLearning={() => {
+              setLearningHandoffMessage(
+                "Your full feedback is ready for the learning activity to use.",
+              );
+            }}
+            onStartNewAssessment={resetAssessment}
+          />
+          {learningHandoffMessage && (
+            <p className="rounded-2xl border-2 border-ink bg-[#f0fffb] p-5 text-muted">
+              {learningHandoffMessage}
+            </p>
+          )}
+        </section>
+      </main>
     );
   }
 
@@ -135,33 +291,38 @@ export function StudentAssessment({
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
           <PicturePromptCard prompt={currentPrompt} />
-          <RecordingPanel
-            assessmentError={assessmentError}
-            hasResult={currentResult !== null}
-            isAnalyzing={isAnalyzing}
-            isPreparing={recordingState === "requesting-permission"}
-            isRecording={recordingState === "recording"}
-            question={currentTurn.question}
-            questionNumber={currentTurn.number}
-            recording={recording}
-            statusMessage={getRecordingStatusMessage(recordingState)}
-            writtenAnswer={writtenAnswer}
-            onAnalyzeRecording={() => submitAnswer("spoken")}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onSubmitWrittenAnswer={() => submitAnswer("written")}
-            onWrittenAnswerChange={setWrittenAnswer}
-          />
+          {pendingCtaAction !== "feedback" && (
+            <RecordingPanel
+              assessmentError={assessmentError}
+              hasResult={currentResult !== null}
+              isAnalyzing={isAnalyzing}
+              isTranscribingLongRecording={isTranscribingLongRecording}
+              isPreparing={recordingState === "requesting-permission"}
+              isRecording={recordingState === "recording"}
+              question={currentTurn.question}
+              questionNumber={currentTurn.number}
+              recording={recording}
+              statusMessage={getRecordingStatusMessage(recordingState)}
+              writtenAnswer={writtenAnswer}
+              onAnalyzeRecording={() => submitAnswer("spoken")}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onSubmitWrittenAnswer={() => submitAnswer("written")}
+              onWrittenAnswerChange={setWrittenAnswer}
+            />
+          )}
         </div>
 
         {currentResult && (
           <AssessmentResults
-            completedQuestionCount={session.questionsAndAnswers.length}
-            cumulativeScores={cumulativeScores}
+            assessment={currentResult.assessment}
             isCheckpoint={isCheckpoint}
-            result={currentResult}
-            onContinue={continueToNextQuestion}
-            onFinish={completeSession}
+            isFinalQuestion={
+              session.questionsAndAnswers.length >= MAX_QUESTIONS
+            }
+            pendingAction={pendingCtaAction}
+            onContinue={prepareNextQuestion}
+            onShowFeedback={showConversationFeedback}
           />
         )}
 

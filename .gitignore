@@ -17,3 +17,5 @@ coverage/
 # Logs and editor files
 *.log
 .DS_Store
+
+tsconfig.tsbuildinfo

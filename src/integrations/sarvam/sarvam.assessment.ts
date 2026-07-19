@@ -23,41 +23,25 @@ const assessmentJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    scores: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        vocabulary: { type: "number", minimum: 1, maximum: 5 },
-        grammar: { type: "number", minimum: 1, maximum: 5 },
-        reasoning: { type: "number", minimum: 1, maximum: 5 },
-        sentenceComplexity: { type: "number", minimum: 1, maximum: 5 },
-        communication: { type: "number", minimum: 1, maximum: 5 },
-      },
-      required: [
-        "vocabulary",
-        "grammar",
-        "reasoning",
-        "sentenceComplexity",
-        "communication",
-      ],
-    },
-    feedback: { type: "string" },
     languageWarning: { type: "boolean" },
     languageHint: { type: "string" },
     isGrounded: { type: "boolean" },
     isRelevantToFocus: { type: "boolean" },
     focusTopic: { type: "string" },
     nextQuestion: { type: "string" },
+    nextQuestionType: {
+      type: "string",
+      enum: ["picture_follow_up", "personal_follow_up"],
+    },
   },
   required: [
-    "scores",
-    "feedback",
     "languageWarning",
     "languageHint",
     "isGrounded",
     "isRelevantToFocus",
     "focusTopic",
     "nextQuestion",
+    "nextQuestionType",
   ],
 } as const;
 
