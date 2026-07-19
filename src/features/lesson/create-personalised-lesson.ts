@@ -30,6 +30,14 @@ const metricPriority = [
 
 export function createPersonalisedLesson(input: unknown): PersonalisedLesson {
   const assessment = pictureConversationAssessmentSchema.parse(input);
+  const recommendation = assessment.primaryRecommendation;
+
+  if (!recommendation) {
+    throw new Error(
+      "A personalised lesson requires an evidence-backed recommendation.",
+    );
+  }
+
   const supportingMetric = findSupportingMetric(assessment);
   const skill = supportingMetric.nextSkill as LearningSkill;
   const content = getLessonContent(skill);
@@ -38,13 +46,13 @@ export function createPersonalisedLesson(input: unknown): PersonalisedLesson {
   return personalisedLessonSchema.parse({
     ...content,
     track:
-      assessment.primaryRecommendation.skill === skill
-        ? assessment.primaryRecommendation.track
+      recommendation.skill === skill
+        ? recommendation.track
         : trackForMetric(supportingMetric.id),
     skill,
     reason:
-      assessment.primaryRecommendation.skill === skill
-        ? assessment.primaryRecommendation.reason
+      recommendation.skill === skill
+        ? recommendation.reason
         : (evidence?.observation ??
           "This is the clearest assessed skill to practise next."),
     learnerEvidence:
@@ -66,10 +74,18 @@ function findSupportingMetric(
   nextSkill: LearningSkill;
   band: NonNullable<MetricResult["band"]>;
 } {
+  const recommendation = assessment.primaryRecommendation;
+
+  if (!recommendation) {
+    throw new Error(
+      "A lesson requires an evidence-backed primary recommendation.",
+    );
+  }
+
   const recommended = assessment.metrics.find(
     (metric) =>
       metric.status === "assessed" &&
-      metric.nextSkill === assessment.primaryRecommendation.skill &&
+      metric.nextSkill === recommendation.skill &&
       isLessonSkillSupported(metric.nextSkill) &&
       metric.evidence.length > 0,
   );

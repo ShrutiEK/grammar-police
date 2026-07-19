@@ -38,7 +38,7 @@ export async function retryInvalidExercise(
           ? error.issues.map((issue) => issue.message).join("; ")
           : "Return valid JSON matching the required schema.";
       console.warn(
-        `AI returned an invalid lesson exercise (attempt ${attempt} of ${maximumExerciseGenerationAttempts}).`,
+        `AI returned an invalid lesson exercise (attempt ${attempt} of ${maximumExerciseGenerationAttempts}): ${validationFeedback}`,
       );
     }
   }

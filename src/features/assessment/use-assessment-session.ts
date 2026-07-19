@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { selectRandomPictureFilename } from "@/features/picture-prompt/picture-prompt.data";
+import { createHybridStore } from "@/features/state-sync/hybrid-store";
+import { STATE_ENDPOINTS } from "@/features/state-sync/sync-transport";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
 import type { AssessmentResult } from "./assessment-response.schema";
@@ -11,64 +13,75 @@ import {
   type AssessmentSession,
   type ConversationTurn,
 } from "./assessment-session.schema";
+import {
+  createInitialAssessmentSession,
+  createPariAssessmentSession,
+  createSwitchedPictureSession,
+} from "./assessment-session";
+import type { PariConversationTopicId } from "./pari-conversation.data";
 
 const SESSION_STORAGE_KEY = "grammar_police_assessment_session_v2";
 export const MAX_QUESTIONS = 8;
 export const ASSESSMENT_CHECKPOINTS = [3, 6] as const;
-const INITIAL_QUESTION = "Can you describe what you see in this picture?";
 
-function createInitialSession(
-  selectedPictureFilename: PictureFilename,
-): AssessmentSession {
-  return {
-    selectedPictureFilename,
-    focusTopic: null,
-    questionsAndAnswers: [
-      {
-        number: 1,
-        question: INITIAL_QUESTION,
-        questionType: "picture_follow_up",
-        answer: null,
-        answerMode: null,
-        assessment: null,
-      },
-    ],
-  };
-}
+// Hybrid store: localStorage stays the instant local mirror; the in-progress
+// session is written through to Redis (the source of truth) on every change.
+const sessionStore = createHybridStore({
+  localKey: SESSION_STORAGE_KEY,
+  schema: assessmentSessionSchema,
+  endpoint: STATE_ENDPOINTS.session,
+});
 
 function saveSession(session: AssessmentSession) {
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  sessionStore.writeLocal(session);
 }
 
 export function useAssessmentSession(initialPictureFilename: PictureFilename) {
   const [session, setSession] = useState<AssessmentSession>(() =>
-    createInitialSession(initialPictureFilename),
+    createInitialAssessmentSession(initialPictureFilename),
   );
 
   useEffect(() => {
-    const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    let cancelled = false;
+    let remoteApplied = false;
 
-    if (!savedSession) {
-      return;
-    }
+    // 1. Restore the local mirror instantly (no UX regression). readLocal also
+    //    clears any corrupt stored session.
+    const local = sessionStore.readLocal();
+    const restoreSessionTimer = local
+      ? window.setTimeout(() => {
+          if (!remoteApplied) {
+            setSession(local.data);
+          }
+        }, 0)
+      : undefined;
 
-    try {
-      const parsedSession = assessmentSessionSchema.safeParse(
-        JSON.parse(savedSession) as unknown,
-      );
-
-      if (parsedSession.success) {
-        const restoreSessionTimer = window.setTimeout(() => {
-          setSession(parsedSession.data);
-        }, 0);
-
-        return () => window.clearTimeout(restoreSessionTimer);
+    // 2. Reconcile with Redis (last-write-wins). An answer recorded while the
+    //    pull is in flight bumps the local sidecar, so remote can't clobber it.
+    void sessionStore.pull().then((remote) => {
+      if (cancelled || !remote) {
+        return;
       }
-    } catch {
-      // The invalid stored session is removed below.
-    }
+      const localNow = sessionStore.readLocal();
+      if (!localNow || remote.updatedAt > localNow.updatedAt) {
+        remoteApplied = true;
+        sessionStore.acceptRemote(remote);
+        setSession(remote.data);
+      } else if (localNow.updatedAt > remote.updatedAt) {
+        void sessionStore.flushDirty();
+      }
+    });
 
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+    // 3. Flush any writes made offline once connectivity returns.
+    const stopOnlineFlush = sessionStore.registerOnlineFlush();
+
+    return () => {
+      cancelled = true;
+      if (restoreSessionTimer !== undefined) {
+        window.clearTimeout(restoreSessionTimer);
+      }
+      stopOnlineFlush();
+    };
   }, []);
 
   const recordResult = useCallback(
@@ -111,10 +124,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     setSession((currentSession) => {
       const currentTurn = currentSession.questionsAndAnswers.at(-1);
 
-      if (
-        !currentTurn?.assessment ||
-        currentSession.questionsAndAnswers.length >= MAX_QUESTIONS
-      ) {
+      if (!currentTurn?.assessment || currentTurn.number >= MAX_QUESTIONS) {
         return currentSession;
       }
 
@@ -123,7 +133,7 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
         questionsAndAnswers: [
           ...currentSession.questionsAndAnswers,
           {
-            number: currentSession.questionsAndAnswers.length + 1,
+            number: currentTurn.number + 1,
             question: currentTurn.assessment.nextQuestion,
             questionType: currentTurn.assessment.nextQuestionType,
             answer: null,
@@ -137,10 +147,63 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     });
   }, []);
 
+  const switchPicture = useCallback(() => {
+    setSession((currentSession) => {
+      const currentTurn = currentSession.questionsAndAnswers.at(-1);
+
+      if (!currentTurn) {
+        return currentSession;
+      }
+
+      const viewedPictures = currentSession.viewedPictureFilenames ?? [
+        ...(currentSession.previousPictureSessions ?? []).map(
+          (pictureSession) => pictureSession.selectedPictureFilename,
+        ),
+        currentSession.selectedPictureFilename,
+      ];
+
+      if (new Set(viewedPictures).size >= 5) {
+        return currentSession;
+      }
+
+      const nextSession = createSwitchedPictureSession(
+        currentSession,
+        selectRandomPictureFilename(viewedPictures),
+      );
+
+      saveSession(nextSession);
+      return nextSession;
+    });
+  }, []);
+
+  const startPariConversation = useCallback(
+    (topicId: PariConversationTopicId) => {
+      setSession((currentSession) => {
+        const nextSession = createPariAssessmentSession(
+          currentSession,
+          topicId,
+        );
+        saveSession(nextSession);
+        return nextSession;
+      });
+    },
+    [],
+  );
+
+  const returnToPictureConversation = useCallback(() => {
+    setSession((currentSession) => {
+      const nextSession = createInitialAssessmentSession(
+        currentSession.selectedPictureFilename,
+      );
+      saveSession(nextSession);
+      return nextSession;
+    });
+  }, []);
+
   const resetSession = useCallback(() => {
     setSession((currentSession) => {
-      const nextSession = createInitialSession(
-        selectRandomPictureFilename(currentSession.selectedPictureFilename),
+      const nextSession = createInitialAssessmentSession(
+        selectRandomPictureFilename([currentSession.selectedPictureFilename]),
       );
       saveSession(nextSession);
       return nextSession;
@@ -151,6 +214,9 @@ export function useAssessmentSession(initialPictureFilename: PictureFilename) {
     session,
     recordResult,
     advanceToNextQuestion,
+    switchPicture,
+    startPariConversation,
+    returnToPictureConversation,
     resetSession,
   };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -13,10 +14,49 @@ import { requestAdaptiveExercise } from "../lesson.client";
 import type { PersonalisedLesson } from "../lesson.schema";
 import {
   createInitialPracticeState,
+  mergeRecentPracticeAttempts,
   recordPracticeAttempt,
 } from "../practice-state";
 
 const EXERCISES_PER_MISSION = 5;
+
+const lessonCardDetails = {
+  example: {
+    background: "bg-support",
+    icon: "🔎",
+    label: "See the upgrade",
+  },
+  tip: {
+    background: "bg-accent-soft",
+    icon: "⚡",
+    label: "Quick power-up",
+  },
+} as const;
+
+function LessonGuideCard({
+  detail,
+  kind,
+}: Readonly<{
+  detail: string;
+  kind: keyof typeof lessonCardDetails;
+}>) {
+  const card = lessonCardDetails[kind];
+
+  return (
+    <div className={`rounded-2xl border-2 border-ink p-4 ${card.background}`}>
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="grid size-11 shrink-0 place-items-center rounded-xl border-2 border-ink bg-surface text-2xl shadow-[2px_2px_0_#17213d]"
+        >
+          {card.icon}
+        </span>
+        <p className="text-lg font-bold">{card.label}</p>
+      </div>
+      <p className="mt-3 text-base leading-relaxed">{detail}</p>
+    </div>
+  );
+}
 
 type LessonMissionProperties = Readonly<{
   lesson: PersonalisedLesson;
@@ -38,6 +78,9 @@ export function LessonMission({
   const [practiceState, setPracticeState] = useState(() =>
     createInitialPracticeState(startingDifficulty),
   );
+  const [previousMissionAttempts, setPreviousMissionAttempts] = useState<
+    PracticeAttempt[]
+  >([]);
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
@@ -58,13 +101,18 @@ export function LessonMission({
 
   async function loadExercise(
     targetDifficulty: ExerciseDifficulty,
-    recentAttempts: PracticeAttempt[],
+    currentMissionAttempts: PracticeAttempt[],
+    earlierAttempts: PracticeAttempt[] = previousMissionAttempts,
   ) {
     setIsLoading(true);
     setLessonError(null);
     setDifficulty(targetDifficulty);
 
     try {
+      const recentAttempts = mergeRecentPracticeAttempts(
+        earlierAttempts,
+        currentMissionAttempts,
+      );
       const nextExercise = await requestAdaptiveExercise({
         skill: lesson.skill,
         skillLabel: lesson.skillLabel,
@@ -73,7 +121,7 @@ export function LessonMission({
         learnerEvidence: lesson.learnerEvidence,
         observation: lesson.observation,
         difficulty: targetDifficulty,
-        recentAttempts: recentAttempts.slice(-8),
+        recentAttempts,
         previousPrompts: recentAttempts
           .map((attempt) => attempt.prompt)
           .slice(-8),
@@ -121,13 +169,18 @@ export function LessonMission({
   }
 
   function restartLesson() {
+    const recentHistory = mergeRecentPracticeAttempts(
+      previousMissionAttempts,
+      practiceState.attempts,
+    );
+    setPreviousMissionAttempts(recentHistory);
     setExercise(null);
     setDifficulty(startingDifficulty);
     setPracticeState(createInitialPracticeState(startingDifficulty));
     setSelectedChoice(null);
     setFeedback(null);
     setWasCorrect(null);
-    void loadExercise(startingDifficulty, []);
+    void loadExercise(startingDifficulty, [], recentHistory);
   }
 
   if (isComplete) {
@@ -216,48 +269,51 @@ export function LessonMission({
           className="overflow-hidden rounded-[2rem] border-[3px] border-ink bg-surface shadow-card"
           aria-labelledby="mission-title"
         >
-          <div className="bg-[#4938a8] px-6 py-6 text-white sm:px-8">
-            <p className="text-lg font-bold tracking-wide">
-              Your highest-impact mission
-            </p>
-            <h1 className="mt-2 text-4xl font-extrabold" id="mission-title">
-              {lesson.missionTitle}
-            </h1>
-            <p className="mt-2 text-white/90">
-              Today’s focus: {lesson.skillLabel}
-            </p>
+          <div className="grid items-center gap-6 bg-[#4938a8] px-6 py-6 text-white sm:px-8 lg:grid-cols-[minmax(0,1fr)_19rem]">
+            <div>
+              <p className="flex items-center gap-2 text-lg font-bold tracking-wide">
+                <span aria-hidden="true">✨</span>
+                Your highest-impact mission
+              </p>
+              <h1 className="mt-2 text-4xl font-extrabold" id="mission-title">
+                {lesson.missionTitle}
+              </h1>
+              <p className="mt-2 text-white/90">
+                Today’s focus: {lesson.skillLabel}
+              </p>
+            </div>
+            <Image
+              alt="A learner practising with colorful word cards and a friendly pencil guide"
+              className="h-44 w-full rounded-2xl border-2 border-white/80 object-cover shadow-[5px_5px_0_rgba(23,33,61,0.65)] lg:h-48"
+              height={1024}
+              priority
+              sizes="(min-width: 1024px) 304px, (min-width: 640px) 50vw, calc(100vw - 6rem)"
+              src="/images/lesson-practice-illustration.png"
+              width={1536}
+            />
           </div>
 
           <div className="space-y-6 p-6 sm:p-8">
-            <details className="rounded-2xl border-2 border-ink bg-accent-soft p-4">
-              <summary className="cursor-pointer font-bold">
-                Why this mission?
-              </summary>
-              <p className="mt-3 text-muted">{lesson.reason}</p>
-              <p className="mt-3 border-l-4 border-eyebrow pl-3 text-base italic text-muted">
-                Your words: “{lesson.learnerEvidence}”
-              </p>
-            </details>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border-2 border-ink bg-accent-soft p-4">
-                <p className="text-lg font-bold">Quick power-up</p>
-                <p className="mt-2 text-base leading-relaxed">
-                  {lesson.teachingTip}
-                </p>
-              </div>
-              <div className="rounded-2xl border-2 border-ink bg-support p-4">
-                <p className="text-lg font-bold">See the upgrade</p>
-                <p className="mt-2 text-base leading-relaxed">
-                  {lesson.example}
-                </p>
-              </div>
-            </div>
-
             <div aria-live="polite">
-              <p className="text-base font-bold text-eyebrow">
-                Your challenge · Step {difficulty} of 5
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="flex items-center gap-2 text-base font-bold text-eyebrow">
+                  <span aria-hidden="true">🎯</span>
+                  Your challenge
+                </p>
+                <div
+                  role="img"
+                  aria-label={`${attemptCount} of ${EXERCISES_PER_MISSION} challenges completed`}
+                  className="flex gap-2"
+                >
+                  {Array.from({ length: EXERCISES_PER_MISSION }, (_, index) => (
+                    <span
+                      aria-hidden="true"
+                      className={`size-3 rounded-full border border-ink ${index < attemptCount ? "bg-support" : index === attemptCount ? "bg-accent" : "bg-canvas"}`}
+                      key={index}
+                    />
+                  ))}
+                </div>
+              </div>
               {isLoading && (
                 <div
                   className="mt-4 rounded-2xl border-2 border-ink bg-accent-soft p-6 text-center"
@@ -305,8 +361,11 @@ export function LessonMission({
                           onClick={() => chooseAnswer(choiceIndex)}
                           type="button"
                         >
-                          <span className="mr-3" aria-hidden="true">
-                            {String.fromCharCode(65 + choiceIndex)}.
+                          <span
+                            className="mr-3 inline-grid size-8 place-items-center rounded-full border-2 border-ink bg-canvas text-sm font-extrabold"
+                            aria-hidden="true"
+                          >
+                            {String.fromCharCode(65 + choiceIndex)}
                           </span>
                           {choice}
                         </button>
@@ -351,6 +410,21 @@ export function LessonMission({
                   )}
                 </>
               )}
+            </div>
+
+            <details className="rounded-2xl border-2 border-ink bg-accent-soft p-4">
+              <summary className="cursor-pointer font-bold">
+                Why this mission?
+              </summary>
+              <p className="mt-3 text-muted">{lesson.reason}</p>
+              <p className="mt-3 border-l-4 border-eyebrow pl-3 text-base italic text-muted">
+                Your words: “{lesson.learnerEvidence}”
+              </p>
+            </details>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <LessonGuideCard detail={lesson.teachingTip} kind="tip" />
+              <LessonGuideCard detail={lesson.example} kind="example" />
             </div>
           </div>
         </section>

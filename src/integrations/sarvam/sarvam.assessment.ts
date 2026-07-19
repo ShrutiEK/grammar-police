@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { learnerAssessmentSchema } from "@/features/assessment/assessment.schema";
-import type { QuestionType } from "@/features/assessment/assessment.schema";
+import type { AssessStudentEnglishInput } from "@/features/assessment/student-answer-provider.types";
 import { createAssessmentPrompt } from "@/prompts/assessment/create-assessment-prompt";
 
 import { requestSarvam } from "./sarvam.client";
@@ -45,23 +45,6 @@ const assessmentJsonSchema = {
     "nextQuestionType",
   ],
 } as const;
-
-type ConversationContextTurn = Readonly<{
-  number: number;
-  question: string;
-  answer: string;
-  questionType: QuestionType;
-  isValid: boolean;
-}>;
-
-type AssessStudentEnglishInput = Readonly<{
-  pictureDescription: string;
-  transcript: string;
-  currentQuestion: string;
-  currentQuestionType: QuestionType;
-  focusTopic: string | null;
-  conversationContext: ReadonlyArray<ConversationContextTurn>;
-}>;
 
 export async function assessStudentEnglish(input: AssessStudentEnglishInput) {
   const response = await requestSarvam("/v1/chat/completions", {

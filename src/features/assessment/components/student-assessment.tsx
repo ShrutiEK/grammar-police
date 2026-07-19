@@ -3,9 +3,20 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { saveLessonAssessment } from "@/features/lesson/lesson-assessment-storage";
-import { picturePromptsByFilename } from "@/features/picture-prompt/picture-prompt.data";
+import {
+  pictureFilenames,
+  picturePromptsByFilename,
+} from "@/features/picture-prompt/picture-prompt.data";
 import { useAudioRecorder } from "@/features/recording/use-audio-recorder";
+import {
+  hydrateFeedbackFromRemote,
+  syncedSavePictureConversationFeedback,
+} from "@/features/state-sync/feedback-sync";
+import {
+  reconcilePictureAssessmentHistory,
+  syncedArchivePictureAssessment,
+} from "@/features/state-sync/history-sync";
+import { syncedSaveLessonAssessment } from "@/features/state-sync/lesson-sync";
 import type { PictureFilename } from "@/picture-descriptions/picture-descriptions.data";
 
 import { requestStudentAssessment } from "../assessment.client";
@@ -13,7 +24,6 @@ import { logAssessmentProgress } from "../assessment-progress-log";
 import { createCumulativePictureAssessment } from "../cumulative-picture-assessment";
 import { createPictureConversationInput } from "../create-picture-conversation-input";
 import {
-  archivePictureAssessment,
   loadPictureAssessmentHistory,
   mergePictureAssessmentAttempts,
   type PictureAssessmentAttempt,
@@ -22,7 +32,6 @@ import { requestPictureConversationFeedback } from "../picture-conversation.clie
 import {
   loadPictureConversationFeedback,
   loadPictureConversationFeedbackForInput,
-  savePictureConversationFeedback,
 } from "../picture-conversation-storage";
 import type {
   PictureConversationFeedback,
@@ -40,6 +49,7 @@ import {
 } from "./assessment-results";
 import { ConversationHistory } from "./conversation-history";
 import { PictureConversationResults } from "./picture-conversation-results";
+import { PariConversationCard } from "./pari-conversation-card";
 import { PicturePromptCard } from "./picture-prompt-card";
 import { RecordingPanel } from "./recording-panel";
 
@@ -53,8 +63,15 @@ export function StudentAssessment({
   const router = useRouter();
   const { recording, recordingState, startRecording, stopRecording, reset } =
     useAudioRecorder();
-  const { session, recordResult, advanceToNextQuestion, resetSession } =
-    useAssessmentSession(initialPictureFilename);
+  const {
+    session,
+    recordResult,
+    advanceToNextQuestion,
+    switchPicture,
+    startPariConversation,
+    returnToPictureConversation,
+    resetSession,
+  } = useAssessmentSession(initialPictureFilename);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<PictureConversationFeedback | null>(
     null,
@@ -73,10 +90,18 @@ export function StudentAssessment({
   const [pendingCtaAction, setPendingCtaAction] =
     useState<AssessmentCtaAction | null>(null);
   const [writtenAnswer, setWrittenAnswer] = useState("");
+  const [isChoosingPariTopic, setIsChoosingPariTopic] = useState(false);
 
   useEffect(() => {
-    // Migrates feedback saved by the earlier sessionStorage version.
+    // Migrate feedback saved by the earlier sessionStorage version, then hydrate
+    // from Redis if this device has no local feedback yet.
     loadPictureConversationFeedback();
+    void hydrateFeedbackFromRemote();
+
+    // Merge the durable Redis history into the local mirror (two-device safe).
+    void reconcilePictureAssessmentHistory(
+      typeof window === "undefined" ? [] : loadPictureAssessmentHistory(),
+    ).then(setAssessmentHistory);
   }, []);
 
   const currentPrompt =
@@ -86,9 +111,25 @@ export function StudentAssessment({
     currentTurn.answer && currentTurn.assessment
       ? { transcript: currentTurn.answer, assessment: currentTurn.assessment }
       : null;
+  const allConversationTurns = [
+    ...(session.previousPictureSessions ?? []).flatMap(
+      (pictureSession) => pictureSession.questionsAndAnswers,
+    ),
+    ...session.questionsAndAnswers,
+  ];
+  const viewedPictures = session.viewedPictureFilenames ?? [
+    ...(session.previousPictureSessions ?? []).map(
+      (pictureSession) => pictureSession.selectedPictureFilename,
+    ),
+    session.selectedPictureFilename,
+  ];
+  const hasUnseenPicture =
+    new Set(viewedPictures).size < pictureFilenames.length;
   const isCheckpoint = ASSESSMENT_CHECKPOINTS.some(
-    (checkpoint) => checkpoint === session.questionsAndAnswers.length,
+    (checkpoint) => checkpoint === currentTurn.number,
   );
+  const canContinueConversation =
+    session.questionsAndAnswers.length < MAX_QUESTIONS;
 
   function resetAssessment() {
     logAssessmentProgress("new assessment requested");
@@ -109,7 +150,7 @@ export function StudentAssessment({
       return assessmentHistory;
     }
 
-    return archivePictureAssessment({
+    return syncedArchivePictureAssessment({
       feedback,
       input: createPictureConversationInput(session),
     });
@@ -117,7 +158,35 @@ export function StudentAssessment({
 
   function startNewPicture() {
     setAssessmentHistory(archiveCurrentAssessment());
-    resetAssessment();
+
+    if (currentTurn.number >= MAX_QUESTIONS) {
+      resetAssessment();
+      return;
+    }
+
+    if (!hasUnseenPicture) {
+      return;
+    }
+
+    switchPicture();
+    setFeedback(null);
+    setAssessmentError(null);
+    setWrittenAnswer("");
+    reset();
+  }
+
+  function startNewConversation() {
+    if (session.conversationMode !== "pari") {
+      startNewPicture();
+      return;
+    }
+
+    setFeedback(null);
+    setAssessmentHistory([]);
+    setAssessmentError(null);
+    setWrittenAnswer("");
+    setIsChoosingPariTopic(true);
+    reset();
   }
 
   function continueToNextQuestion() {
@@ -194,7 +263,7 @@ export function StudentAssessment({
           (metric) => metric.status === "assessed",
         ).length,
       });
-      savePictureConversationFeedback(input, response);
+      syncedSavePictureConversationFeedback(input, response);
       setFeedback(response);
       logAssessmentProgress("feedback displayed");
     } catch (error) {
@@ -208,6 +277,70 @@ export function StudentAssessment({
       setFeedbackProgress(null);
       setPendingCtaAction(null);
       logAssessmentProgress("feedback request finished");
+    }
+  }
+
+  async function changePictureDuringAssessment() {
+    if (pendingCtaAction) {
+      return;
+    }
+
+    setAssessmentError(null);
+    setPendingCtaAction("change-picture");
+    setFeedbackProgress({
+      completedMetricIds: [],
+      stage: "reading",
+      totalMetrics: 0,
+    });
+
+    try {
+      const input = createPictureConversationInput(session);
+      const hasAssessableAnswer = input.turns.some(
+        (turn) => !turn.languageWarning && turn.isRelevantToFocus,
+      );
+
+      if (!hasAssessableAnswer) {
+        switchPicture();
+        setWrittenAnswer("");
+        reset();
+        return;
+      }
+
+      const cachedFeedback = loadPictureConversationFeedbackForInput(input);
+      let pictureFeedback = cachedFeedback;
+
+      if (!pictureFeedback) {
+        const response = await requestPictureConversationFeedback(input, {
+          onProgress: setFeedbackProgress,
+        });
+
+        if (response.status === "retry_later") {
+          setAssessmentError(response.message);
+          return;
+        }
+
+        syncedSavePictureConversationFeedback(input, response);
+        pictureFeedback = response;
+      }
+
+      const nextHistory = syncedArchivePictureAssessment({
+        feedback: pictureFeedback,
+        input,
+      });
+      setAssessmentHistory(nextHistory);
+      switchPicture();
+      setWrittenAnswer("");
+      reset();
+    } catch (error) {
+      logAssessmentProgress("picture change failed", {
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      setAssessmentError(
+        "We couldn’t save this part of your assessment. Please try changing the picture again.",
+      );
+    } finally {
+      setFeedbackProgress(null);
+      setPendingCtaAction(null);
     }
   }
 
@@ -251,6 +384,11 @@ export function StudentAssessment({
           currentQuestionType: currentTurn.questionType ?? "picture_follow_up",
           focusTopic: session.focusTopic,
           conversationContext,
+          conversationMode: session.conversationMode ?? "picture",
+          conversationTopic:
+            session.conversationMode === "pari"
+              ? (session.focusTopic ?? undefined)
+              : undefined,
         },
         {
           onBatchTranscriptionPending: () => {
@@ -272,6 +410,16 @@ export function StudentAssessment({
       logAssessmentProgress("answer assessment saved", {
         questionNumber: currentTurn.number,
       });
+
+      // Normal turns flow straight into the next question. Checkpoints and the
+      // final question keep the results card so the learner can choose to keep
+      // talking or see their feedback.
+      if (canContinueConversation && !isCheckpoint) {
+        continueToNextQuestion();
+        logAssessmentProgress("advanced to next question automatically", {
+          nextQuestionNumber: currentTurn.number + 1,
+        });
+      }
     } catch (error) {
       logAssessmentProgress("answer assessment failed", {
         errorName: error instanceof Error ? error.name : "UnknownError",
@@ -297,7 +445,11 @@ export function StudentAssessment({
       input: createPictureConversationInput(session),
     } satisfies PictureAssessmentAttempt;
     const cumulativeAttempts = mergePictureAssessmentAttempts([
-      ...assessmentHistory,
+      ...assessmentHistory.filter(
+        (attempt) =>
+          (attempt.input.conversationMode ?? "picture") ===
+          (session.conversationMode ?? "picture"),
+      ),
       currentAttempt,
     ]);
     const cumulativeAssessment =
@@ -308,19 +460,21 @@ export function StudentAssessment({
         <section className="mx-auto max-w-6xl space-y-6">
           <PictureConversationResults
             assessment={cumulativeAssessment}
-            canContinueConversation={
-              session.questionsAndAnswers.length < MAX_QUESTIONS
+            conversationMode={session.conversationMode ?? "picture"}
+            canContinueConversation={currentTurn.number < MAX_QUESTIONS}
+            canStartNewPicture={
+              currentTurn.number >= MAX_QUESTIONS || hasUnseenPicture
             }
             nextConversationPrompt={
               currentTurn.assessment?.nextQuestion ||
               feedback.nextConversationPrompt
             }
             pictureCount={cumulativeAttempts.length}
-            hasSpokenAnswers={session.questionsAndAnswers.some(
-              (turn) => turn.answerMode === "spoken",
+            hasSpokenAnswers={cumulativeAttempts.some((attempt) =>
+              attempt.input.turns.some((turn) => turn.answerMode === "spoken"),
             )}
-            hasWrittenAnswers={session.questionsAndAnswers.some(
-              (turn) => turn.answerMode === "written",
+            hasWrittenAnswers={cumulativeAttempts.some((attempt) =>
+              attempt.input.turns.some((turn) => turn.answerMode === "written"),
             )}
             onContinueConversation={() => {
               setFeedback(null);
@@ -328,7 +482,7 @@ export function StudentAssessment({
             }}
             onContinueLearning={() => {
               try {
-                saveLessonAssessment(feedback.assessment);
+                syncedSaveLessonAssessment(cumulativeAssessment);
                 router.push("/lesson");
               } catch {
                 setAssessmentError(
@@ -340,7 +494,7 @@ export function StudentAssessment({
                 "Your next challenge will use what came through in these conversations.",
               );
             }}
-            onStartNewAssessment={startNewPicture}
+            onStartNewAssessment={startNewConversation}
           />
           {assessmentError && (
             <p
@@ -359,48 +513,94 @@ export function StudentAssessment({
     <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
       <section className="mx-auto max-w-6xl space-y-4">
         <header className="flex justify-end">
-          <p className="rounded-full border border-ink/20 bg-surface px-3 py-1 text-base font-bold text-muted">
+          <p className="rounded-full border border-ink/20 bg-surface px-2 py-0.5 text-sm font-bold text-muted sm:px-3 sm:py-1 sm:text-base">
             English only
           </p>
         </header>
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
-          <PicturePromptCard prompt={currentPrompt} />
-          <RecordingPanel
-            assessmentError={assessmentError}
-            feedbackProgress={feedbackProgress}
-            hasResult={currentResult !== null}
-            isAnalyzing={isAnalyzing}
-            isTranscribingLongRecording={isTranscribingLongRecording}
-            isPreparing={recordingState === "requesting-permission"}
-            isRecording={recordingState === "recording"}
-            question={currentTurn.question}
-            questionNumber={currentTurn.number}
-            recording={recording}
-            statusMessage={getRecordingStatusMessage(recordingState)}
-            writtenAnswer={writtenAnswer}
-            onAnalyzeRecording={() => submitAnswer("spoken")}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onSubmitWrittenAnswer={() => submitAnswer("written")}
-            onWrittenAnswerChange={setWrittenAnswer}
-          />
+          {session.conversationMode === "pari" || isChoosingPariTopic ? (
+            <PariConversationCard
+              activeTopicId={session.pariTopicId ?? null}
+              isDisabled={
+                isAnalyzing ||
+                isTranscribingLongRecording ||
+                recordingState === "recording" ||
+                recordingState === "requesting-permission" ||
+                Boolean(currentResult)
+              }
+              onChooseTopic={(topicId) => {
+                startPariConversation(topicId);
+                setAssessmentHistory([]);
+                setFeedback(null);
+                setIsChoosingPariTopic(false);
+                setWrittenAnswer("");
+                reset();
+              }}
+              onReturnToPicture={() => {
+                returnToPictureConversation();
+                setAssessmentHistory([]);
+                setFeedback(null);
+                setIsChoosingPariTopic(false);
+                setWrittenAnswer("");
+                reset();
+              }}
+            />
+          ) : (
+            <PicturePromptCard
+              canChangePicture={hasUnseenPicture && !currentResult}
+              isChangeDisabled={
+                isAnalyzing ||
+                isTranscribingLongRecording ||
+                recordingState === "recording" ||
+                recordingState === "requesting-permission"
+              }
+              isChangingPicture={pendingCtaAction === "change-picture"}
+              prompt={currentPrompt}
+              onChangePicture={changePictureDuringAssessment}
+              onDmWithPari={() => setIsChoosingPariTopic(true)}
+            />
+          )}
+          {!isChoosingPariTopic && (
+            <RecordingPanel
+              assessmentError={assessmentError}
+              conversationMode={session.conversationMode ?? "picture"}
+              feedbackProgress={feedbackProgress}
+              hasResult={currentResult !== null}
+              isAnalyzing={isAnalyzing}
+              isTranscribingLongRecording={isTranscribingLongRecording}
+              isPreparing={recordingState === "requesting-permission"}
+              isRecording={recordingState === "recording"}
+              question={currentTurn.question}
+              recording={recording}
+              statusMessage={getRecordingStatusMessage(recordingState)}
+              writtenAnswer={writtenAnswer}
+              onAnalyzeRecording={() => submitAnswer("spoken")}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onSubmitWrittenAnswer={() => submitAnswer("written")}
+              onWrittenAnswerChange={setWrittenAnswer}
+            />
+          )}
         </div>
 
         {currentResult && (
           <AssessmentResults
             assessment={currentResult.assessment}
-            isCheckpoint={isCheckpoint}
-            isFinalQuestion={
-              session.questionsAndAnswers.length >= MAX_QUESTIONS
+            canChangePicture={
+              session.conversationMode !== "pari" && hasUnseenPicture
             }
+            conversationMode={session.conversationMode ?? "picture"}
+            isCheckpoint={isCheckpoint}
+            isFinalQuestion={!canContinueConversation}
             pendingAction={pendingCtaAction}
+            onChangePicture={changePictureDuringAssessment}
             onContinue={prepareNextQuestion}
             onShowFeedback={showConversationFeedback}
           />
         )}
 
-        <ConversationHistory turns={session.questionsAndAnswers} />
+        <ConversationHistory turns={allConversationTurns} />
       </section>
     </main>
   );

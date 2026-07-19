@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AdaptiveExercise } from "./adaptive-exercise.schema";
 import {
   createInitialPracticeState,
+  mergeRecentPracticeAttempts,
   recordPracticeAttempt,
 } from "./practice-state";
 
@@ -28,6 +29,8 @@ describe("recordPracticeAttempt", () => {
     expect(state.difficulty).toBe(2);
     expect(state.consecutiveCorrect).toBe(1);
     expect(state.attempts[0]?.hintUsed).toBe(false);
+    expect(state.attempts[0]?.correctAnswer).toBe("striped");
+    expect(state.attempts[0]?.exerciseContent).toContain("softly");
   });
 
   it("keeps difficulty and records supported practice after an error", () => {
@@ -41,5 +44,19 @@ describe("recordPracticeAttempt", () => {
     expect(state.difficulty).toBe(2);
     expect(state.consecutiveIncorrect).toBe(1);
     expect(state.attempts[0]?.hintUsed).toBe(true);
+  });
+
+  it("preserves recent questions for a fresh Play again mission", () => {
+    const completedMission = Array.from({ length: 5 }, (_, index) => ({
+      prompt: `Question ${index + 1}`,
+      difficulty: 1 as const,
+      selectedChoice: "answer",
+      wasCorrect: true,
+      hintUsed: false,
+    }));
+
+    expect(mergeRecentPracticeAttempts([], completedMission)).toEqual(
+      completedMission,
+    );
   });
 });

@@ -10,6 +10,8 @@ import {
   mockLessonAssessments,
   mockLessonLabels,
 } from "../demo-assessment";
+import { pullLessonAssessment } from "@/features/state-sync/lesson-sync";
+
 import {
   lessonAssessmentStorageKey,
   loadLessonAssessment,
@@ -25,20 +27,32 @@ export function LessonLoader() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadLessonTimer = window.setTimeout(() => {
+    let cancelled = false;
+    const loadLessonTimer = window.setTimeout(async () => {
       try {
-        const savedAssessment = loadLessonAssessment();
+        // Prefer the sessionStorage handoff; fall back to the Redis mirror when
+        // it is missing (e.g. a fresh tab or a lost sessionStorage).
+        const savedAssessment =
+          loadLessonAssessment() ?? (await pullLessonAssessment());
+        if (cancelled) {
+          return;
+        }
         const input = savedAssessment ?? demoLessonAssessment;
         const isDemo = savedAssessment === null;
         setState({ lesson: createPersonalisedLesson(input), isDemo });
       } catch {
-        setLoadError(
-          "We couldn’t open your next challenge. Return to the conversation and try again.",
-        );
+        if (!cancelled) {
+          setLoadError(
+            "We couldn’t open your next challenge. Return to the conversation and try again.",
+          );
+        }
       }
     }, 0);
 
-    return () => window.clearTimeout(loadLessonTimer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loadLessonTimer);
+    };
   }, []);
 
   if (loadError) {

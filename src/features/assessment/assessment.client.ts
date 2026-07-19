@@ -22,6 +22,8 @@ type ConversationContextTurn = Readonly<{
 }>;
 
 type RequestAssessmentInput = Readonly<{
+  conversationMode: "picture" | "pari";
+  conversationTopic?: string;
   audioBlob?: Blob;
   audioDurationInSeconds?: number;
   transcriptionJobId?: string;
@@ -52,6 +54,8 @@ async function requestAssessmentOnce({
   currentQuestionType,
   focusTopic,
   conversationContext,
+  conversationMode,
+  conversationTopic,
 }: RequestAssessmentInput): Promise<
   AssessmentResult | PendingTranscriptionResult
 > {
@@ -74,6 +78,8 @@ async function requestAssessmentOnce({
   }
 
   formData.append("pictureFilename", pictureFilename);
+  formData.append("conversationMode", conversationMode);
+  formData.append("conversationTopic", conversationTopic ?? "");
   formData.append("currentQuestion", currentQuestion);
   formData.append("currentQuestionType", currentQuestionType);
   formData.append("focusTopic", focusTopic ?? "");

@@ -35,6 +35,19 @@ follow-up question. For example:
 
 This turns object naming into natural English conversation.
 
+### DM with Pari
+
+Learners who cannot or prefer not to use an image can start an equivalent
+personal conversation with Pari. They choose a familiar topic such as movies,
+stories and poems, hobbies, or daily life, then answer connected questions by
+speaking or writing.
+
+This is an equal activity route rather than a recovery screen. It must not ask
+the learner to inspect, imagine, or describe an image. Scene-understanding
+evidence is unavailable in this mode, while grammar, vocabulary, expression,
+conversation, writing, and eligible speech signals can still inform the next
+lesson.
+
 ### Read aloud
 
 The learner reads a displayed English prompt, such as a favourite-movie

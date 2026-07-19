@@ -14,7 +14,7 @@ issues or pull requests.
       language until AI-generated paths exist.
 - [x] Fix picture metadata so image, alt text, learner instruction, and scene
       description describe the same scene.
-- [ ] Update environment documentation to use Sarvam consistently, or complete
+- [x] Update environment documentation to use Sarvam consistently, or complete
       a deliberate provider migration.
 - [x] Add a visible English-only note and enforce it in activity prompts and
       assessments.
@@ -37,6 +37,19 @@ issues or pull requests.
 **Done when:** a learner can describe any supported detail in a picture, receive
 a relevant personal question, and see feedback tied to both turns.
 
+## Accessible conversation route
+
+- [x] Offer “DM with Pari” as a conversation route that does not require an
+      image.
+- [x] Provide familiar, age-neutral starter topics and connected personal
+      follow-ups.
+- [x] Reuse spoken and written answers while excluding scene-understanding
+      evidence from this route.
+- [x] Keep the route keyboard accessible, screen-reader understandable, and
+      compatible with the display accessibility settings.
+- [ ] Adapt the starter topics and safety constraints by learner age once age
+      capture is available.
+
 ## Milestone 2 — Trustworthy assessment and explanations
 
 The detailed contract for picture-conversation metrics lives in
@@ -48,6 +61,8 @@ The detailed contract for picture-conversation metrics lives in
       assessment schema.
 - [ ] Generate concise explanations such as “You used clear nouns, but often
       omitted articles,” with supporting transcript evidence.
+- [x] Allow assessed results to report `no_gap` or an `unmapped` concept instead
+      of forcing an unrelated supported learning skill.
 - [ ] Distinguish transcription failures, invalid model output, network errors,
       and unavailable assessment services in the UI.
 - [ ] Do not label transcript-only inference as a precise pronunciation score.

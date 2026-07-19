@@ -31,7 +31,7 @@ const metricTrack = {
   writing_conventions: "writing_conventions",
 } as const satisfies Record<
   MetricId,
-  PictureConversationAssessment["primaryRecommendation"]["track"]
+  NonNullable<PictureConversationAssessment["primaryRecommendation"]>["track"]
 >;
 
 const metricLabel = {
@@ -142,6 +142,10 @@ function getUnavailableReason(
     return "Answer a personal follow-up so we can understand conversation skills.";
   }
 
+  if (metricId === "scene_understanding" && input.conversationMode === "pari") {
+    return "This conversation did not use a picture.";
+  }
+
   return "We need another example to understand this part of your English.";
 }
 
@@ -171,7 +175,7 @@ function selectPrimaryMetric(metrics: PictureConversationMetricResult[]) {
 
 function createLearnerSummary(
   assessedMetrics: PictureConversationMetricResult[],
-  primaryMetric: NonNullable<ReturnType<typeof selectPrimaryMetric>>,
+  primaryMetric?: NonNullable<ReturnType<typeof selectPrimaryMetric>>,
 ) {
   const strongAreas = assessedMetrics
     .filter(
@@ -181,6 +185,12 @@ function createLearnerSummary(
     )
     .slice(0, 2)
     .map((metric) => metricLabel[metric.id]);
+  if (!primaryMetric) {
+    return strongAreas.length > 0
+      ? `You shared useful ideas and showed progress in ${strongAreas.join(" and ")}. No single learning gap stood out from this conversation.`
+      : "You shared useful English. We did not find enough clear evidence to choose one helpful next skill yet.";
+  }
+
   const nextSkill = primaryMetric.nextSkill.replaceAll("_", " ");
 
   if (strongAreas.length > 0) {
@@ -209,24 +219,21 @@ function createAssessment(
   );
   const primaryMetric = selectPrimaryMetric(metrics);
 
-  if (!primaryMetric) {
-    throw new Error("The provider did not return an assessed metric.");
-  }
-
-  const nextSkill = primaryMetric.nextSkill.replaceAll("_", " ");
-  const observation = primaryMetric.evidence[0]?.observation;
-  const reason = observation
-    ? `${observation} Next, practise ${nextSkill}.`
-    : `Practise ${nextSkill} to strengthen ${metricLabel[primaryMetric.id]}.`;
-
   return pictureConversationAssessmentSchema.parse({
     learnerSummary: createLearnerSummary(metrics, primaryMetric),
     metrics,
-    primaryRecommendation: {
-      reason: reason.slice(0, 300),
-      skill: primaryMetric.nextSkill,
-      track: metricTrack[primaryMetric.id],
-    },
+    ...(primaryMetric
+      ? {
+          primaryRecommendation: {
+            reason: (primaryMetric.evidence[0]?.observation
+              ? `${primaryMetric.evidence[0].observation} Next, practise ${primaryMetric.nextSkill.replaceAll("_", " ")}.`
+              : `Practise ${primaryMetric.nextSkill.replaceAll("_", " ")} to strengthen ${metricLabel[primaryMetric.id]}.`
+            ).slice(0, 300),
+            skill: primaryMetric.nextSkill,
+            track: metricTrack[primaryMetric.id],
+          },
+        }
+      : {}),
   });
 }
 
@@ -281,6 +288,10 @@ export async function assessPictureConversationMetricsIndividually(
         metricId,
       });
     });
+  }
+
+  if (completedMetrics.length === 0) {
+    throw new Error("The provider did not return an assessed metric.");
   }
 
   const assessment = createAssessment(input, completedMetrics);

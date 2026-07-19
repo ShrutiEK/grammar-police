@@ -73,6 +73,7 @@ const evidenceSchema = z.object({
     "personal_follow_up",
     "unknown",
   ]),
+  correctedText: z.string().trim().min(1).optional(),
   learnerText: z.string().trim().min(1),
   observation: z.string().trim().min(1),
 });
@@ -108,11 +109,13 @@ export const metricResultSchema = z
 
 export const pictureConversationAssessmentSchema = z.object({
   metrics: z.array(metricResultSchema).min(1),
-  primaryRecommendation: z.object({
-    track: learningTrackSchema,
-    skill: learningSkillSchema,
-    reason: z.string().trim().min(1),
-  }),
+  primaryRecommendation: z
+    .object({
+      track: learningTrackSchema,
+      skill: learningSkillSchema,
+      reason: z.string().trim().min(1),
+    })
+    .optional(),
   learnerSummary: z.string().trim().min(1),
 });
 

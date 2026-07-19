@@ -91,6 +91,11 @@
     @apply -translate-y-0.5 shadow-[4px_4px_0_currentColor];
   }
 
+  button:enabled:active {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 currentColor;
+  }
+
   :where(a, button, audio, input, select, summary, textarea):focus-visible {
     @apply outline-3 outline-offset-4 outline-ink;
   }
@@ -106,7 +111,76 @@
   }
 
   .primary-button {
-    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-7 py-3 text-xl leading-snug font-bold text-action-ink transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-65;
+    @apply min-h-14 rounded-full border-2 border-ink bg-accent px-7 py-3 text-xl leading-snug font-bold text-action-ink transition-[transform,box-shadow,filter] duration-200 enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:grayscale-[0.2] disabled:opacity-65;
+  }
+
+  .conversation-trail {
+    @apply rounded-2xl border-2 border-ink bg-surface px-4 py-3 shadow-[5px_5px_0_#17213d] sm:px-5;
+  }
+
+  .conversation-trail-dot {
+    @apply grid size-8 shrink-0 place-items-center rounded-full border-2 border-ink/35 bg-canvas text-xs font-bold text-muted transition-[transform,background-color] duration-300;
+  }
+
+  .conversation-trail-dot-complete {
+    @apply border-ink bg-support text-ink;
+  }
+
+  .conversation-trail-dot-current {
+    @apply scale-110 border-ink bg-accent text-action-ink shadow-[2px_2px_0_#17213d];
+    animation: trail-arrive 420ms ease-out;
+  }
+
+  .conversation-trail-line {
+    @apply h-0.5 min-w-2 flex-1 bg-ink/15;
+  }
+
+  .conversation-trail-line-complete {
+    @apply bg-support;
+  }
+
+  .answer-mode-switch {
+    @apply grid grid-cols-2 rounded-full border-2 border-ink bg-canvas p-1;
+  }
+
+  .answer-mode-option {
+    @apply min-h-12 rounded-full px-4 py-2 text-base font-bold text-muted shadow-none transition-[background-color,color,transform] disabled:cursor-not-allowed;
+  }
+
+  .answer-mode-option[aria-pressed="true"] {
+    @apply bg-accent text-action-ink shadow-[2px_2px_0_#17213d];
+  }
+
+  .recording-orbit {
+    @apply relative grid size-24 place-items-center;
+  }
+
+  .recording-ring {
+    @apply pointer-events-none absolute inset-2 rounded-full border-2 border-accent opacity-60;
+    animation: microphone-breathe 2.4s ease-in-out infinite;
+  }
+
+  .recording-ring-two {
+    animation-delay: 600ms;
+  }
+
+  .recording-orbit.is-listening .recording-ring {
+    @apply border-[#d9483b];
+    animation: listening-ring 1.4s ease-out infinite;
+  }
+
+  .recording-button {
+    @apply relative z-10 grid size-16 place-items-center rounded-full border-2 border-ink bg-accent text-2xl shadow-[4px_4px_0_#17213d] transition-[transform,background-color,box-shadow] duration-200 enabled:hover:-translate-y-1 disabled:cursor-wait sm:size-18;
+  }
+
+  .recording-button.is-recording {
+    @apply bg-[#ff8b7b];
+  }
+
+  .sound-bar {
+    @apply w-1 rounded-full bg-[#d9483b];
+    height: 35%;
+    animation: sound-wave 700ms ease-in-out infinite alternate;
   }
 
   .accessibility-toolkit {
@@ -114,7 +188,7 @@
   }
 
   .accessibility-toolkit-trigger {
-    @apply inline-flex min-h-14 items-center gap-2 rounded-full border-2 border-ink bg-accent px-6 py-3 text-xl font-bold text-action-ink shadow-[4px_4px_0_#17213d];
+    @apply inline-flex min-h-12 items-center gap-1.5 rounded-full border-2 border-ink bg-accent px-4 py-2 text-base font-bold text-action-ink shadow-[4px_4px_0_#17213d] sm:min-h-14 sm:gap-2 sm:px-6 sm:py-3 sm:text-xl;
   }
 
   .accessibility-toolkit-panel {
@@ -147,6 +221,61 @@
 
   .toolkit-reset-button {
     @apply mt-5 min-h-14 w-full rounded-xl border-2 border-ink bg-surface px-5 py-3 text-xl font-bold text-ink underline decoration-2 underline-offset-4;
+  }
+}
+
+@keyframes microphone-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.78);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+}
+
+@keyframes listening-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes sound-wave {
+  from {
+    height: 28%;
+  }
+  to {
+    height: 100%;
+  }
+}
+
+@keyframes trail-arrive {
+  0% {
+    transform: scale(0.7) rotate(-8deg);
+  }
+  70% {
+    transform: scale(1.18) rotate(3deg);
+  }
+  100% {
+    transform: scale(1.1) rotate(0);
+  }
+}
+
+@keyframes answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

@@ -8,10 +8,10 @@ import {
 } from "@/features/lesson/adaptive-exercise.schema";
 import { parseExerciseForRequest } from "@/features/lesson/adaptive-exercise-quality";
 import { retryInvalidExercise } from "@/features/lesson/retry-invalid-exercise";
-import { parseStructuredChatCompletion } from "@/integrations/structured-chat-completion";
 import { createAdaptiveExercisePrompt } from "@/prompts/lesson/create-adaptive-exercise-prompt";
 
 import { requestOpenAi } from "./openai.client";
+import { parseOpenAiResponseOutput } from "./openai.responses";
 
 const adaptiveExerciseModel = "gpt-5.6-terra";
 
@@ -20,9 +20,9 @@ export async function generateAdaptiveExerciseWithOpenAi(
 ) {
   return retryInvalidExercise(
     async (attempt, validationFeedback) => {
-      const response = await requestOpenAi("/v1/chat/completions", {
+      const response = await requestOpenAi("/v1/responses", {
         body: JSON.stringify({
-          messages: [
+          input: [
             {
               role: "system",
               content: createAdaptiveExercisePrompt(input),
@@ -36,23 +36,23 @@ export async function generateAdaptiveExerciseWithOpenAi(
             },
           ],
           model: adaptiveExerciseModel,
-          reasoning_effort: "none",
-          response_format: {
-            type: "json_schema",
-            json_schema: {
+          reasoning: { effort: "none" },
+          store: false,
+          text: {
+            format: {
+              type: "json_schema",
               name: "adaptive_english_exercise",
               schema: z.toJSONSchema(generatedAdaptiveExerciseOutputSchema),
               strict: true,
             },
           },
-          temperature: 0.2,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
 
       const responseBody: unknown = await response.json();
-      return parseStructuredChatCompletion(responseBody, "OpenAI");
+      return parseOpenAiResponseOutput(responseBody);
     },
     (candidate) => parseExerciseForRequest(candidate, input),
   );

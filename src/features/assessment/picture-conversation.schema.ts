@@ -110,6 +110,7 @@ export type ReportPictureConversationProgress = (
 ) => void;
 
 const metricEvidenceSchema = z.object({
+  correctedText: z.string().trim().min(1).max(300).optional(),
   learnerText: z.string().trim().min(1).max(300),
   observation: z.string().trim().min(1).max(240),
   turn: conversationTurnKindSchema,
@@ -121,8 +122,10 @@ const metricResultSchema = z.object({
   band: metricBandSchema.optional(),
   confidence: z.enum(["low", "medium", "high"]),
   evidence: z.array(metricEvidenceSchema).max(2),
+  findingStatus: z.enum(["supported", "unmapped", "no_gap"]).optional(),
   nextSkill: learningSkillSchema.optional(),
   strength: z.string().trim().min(1).max(240).optional(),
+  unmappedSkill: z.string().trim().min(1).max(80).optional(),
   unavailableReason: z.string().trim().min(1).max(240).optional(),
 });
 
@@ -206,6 +209,12 @@ const providerEvidenceTurnSchema = z.enum([
   ...conversationTurnKindSchema.options,
   "none",
 ]);
+const providerFindingStatusSchema = z.enum([
+  "supported",
+  "unmapped",
+  "no_gap",
+  "not_assessed",
+]);
 
 export function createPictureConversationProviderMetricSchema(
   metricId: AssessableMetricId,
@@ -216,20 +225,27 @@ export function createPictureConversationProviderMetricSchema(
     .object({
       band: providerBandSchema,
       confidence: z.enum(["low", "medium", "high"]),
+      correctedText: z.string().trim().max(300),
       evidenceQuote: z.string().trim().max(300),
       evidenceTurn: providerEvidenceTurnSchema,
+      findingStatus: providerFindingStatusSchema,
       metricId: z.literal(metricId),
       nextSkill: nextSkillSchema,
       observation: z.string().trim().max(240),
       strength: z.string().trim().max(240),
+      unmappedSkill: z.string().trim().max(80),
       unavailableReason: z.string().trim().max(240),
     })
     .superRefine((metric, context) => {
       if (metric.band === "not_assessed") {
-        if (!metric.unavailableReason) {
+        if (
+          metric.findingStatus !== "not_assessed" ||
+          !metric.unavailableReason
+        ) {
           context.addIssue({
             code: "custom",
-            message: "An unavailable reason is required.",
+            message:
+              "An unavailable result requires not_assessed and a reason.",
           });
         }
         return;
@@ -238,7 +254,6 @@ export function createPictureConversationProviderMetricSchema(
       if (
         !metric.evidenceQuote ||
         metric.evidenceTurn === "none" ||
-        metric.nextSkill === "none" ||
         !metric.observation ||
         !metric.strength
       ) {
@@ -246,6 +261,46 @@ export function createPictureConversationProviderMetricSchema(
           code: "custom",
           message:
             "An assessed metric requires complete evidence and guidance.",
+        });
+      }
+
+      if (
+        ["supported", "unmapped"].includes(metric.findingStatus) &&
+        !metric.correctedText
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "A learning need requires a corrected example.",
+        });
+      }
+
+      if (metric.findingStatus === "supported" && metric.nextSkill === "none") {
+        context.addIssue({
+          code: "custom",
+          message: "A supported finding requires a typed next skill.",
+        });
+      }
+
+      if (
+        metric.findingStatus === "unmapped" &&
+        (metric.nextSkill !== "none" || !metric.unmappedSkill)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "An unmapped finding requires a concept label and no routed skill.",
+        });
+      }
+
+      if (
+        metric.findingStatus === "no_gap" &&
+        (metric.nextSkill !== "none" ||
+          metric.unmappedSkill ||
+          metric.correctedText)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "A no-gap finding must not route to a learning skill.",
         });
       }
     });
@@ -271,33 +326,47 @@ export function parsePictureConversationProviderMetric(
   }
 
   const evidenceTurn = conversationTurnKindSchema.parse(metric.evidenceTurn);
-  const nextSkill = learningSkillSchema.parse(metric.nextSkill);
+
+  if (metric.findingStatus === "not_assessed") {
+    throw new Error("An assessed result cannot use not_assessed.");
+  }
 
   return {
     band: metric.band,
     confidence: metric.confidence,
     evidence: [
       {
+        ...(metric.correctedText
+          ? { correctedText: metric.correctedText }
+          : {}),
         learnerText: metric.evidenceQuote,
         observation: metric.observation,
         turn: evidenceTurn,
       },
     ],
+    findingStatus: metric.findingStatus,
     id: metricId,
-    nextSkill,
+    ...(metric.findingStatus === "supported"
+      ? { nextSkill: learningSkillSchema.parse(metric.nextSkill) }
+      : {}),
     status: "assessed",
     strength: metric.strength,
+    ...(metric.findingStatus === "unmapped"
+      ? { unmappedSkill: metric.unmappedSkill }
+      : {}),
   };
 }
 
 export const pictureConversationAssessmentSchema = z.object({
   learnerSummary: z.string().trim().min(1).max(500),
   metrics: metricResultsSchema,
-  primaryRecommendation: z.object({
-    reason: z.string().trim().min(1).max(300),
-    skill: learningSkillSchema,
-    track: learningTrackSchema,
-  }),
+  primaryRecommendation: z
+    .object({
+      reason: z.string().trim().min(1).max(300),
+      skill: learningSkillSchema,
+      track: learningTrackSchema,
+    })
+    .optional(),
 });
 
 export type PictureConversationAssessment = z.infer<
@@ -305,6 +374,10 @@ export type PictureConversationAssessment = z.infer<
 >;
 
 export const pictureConversationInputSchema = z.object({
+  conversationMode: z.enum(["picture", "pari"]).optional(),
+  pariTopicId: z
+    .enum(["movies", "stories", "hobbies", "daily-life"])
+    .optional(),
   pictureFilename: z.enum([
     "beach.png",
     "classroom.png",
@@ -320,6 +393,7 @@ export type PictureConversationInput = z.infer<
 >;
 
 export type PictureConversationAssessmentInput = Readonly<{
+  conversationMode?: "picture" | "pari";
   pictureDescription: string;
   turns: readonly PictureConversationTurn[];
 }>;
@@ -357,6 +431,22 @@ export const pictureConversationStreamEventSchema = z.discriminatedUnion(
 export type PictureConversationFeedback = z.infer<
   typeof pictureConversationFeedbackSchema
 >;
+
+// Conversation-keyed feedback cache (key = stringified normalized input).
+export const feedbackCacheSchema = z.record(
+  z.string(),
+  pictureConversationFeedbackSchema,
+);
+
+// One archived assessment attempt, and the capped cross-picture history.
+export const pictureAssessmentAttemptSchema = z.object({
+  feedback: pictureConversationFeedbackSchema,
+  input: pictureConversationInputSchema,
+});
+
+export const pictureAssessmentHistorySchema = pictureAssessmentAttemptSchema
+  .array()
+  .max(20);
 
 export type PictureConversationResponse = z.infer<
   typeof pictureConversationResponseSchema

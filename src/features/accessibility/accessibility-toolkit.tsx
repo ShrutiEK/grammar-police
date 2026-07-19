@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "grammar-police-accessibility-preferences";
+const STORAGE_KEY = "lingo-jungle-accessibility-preferences";
 
 const themes = [
   { label: "Default", value: "default" },

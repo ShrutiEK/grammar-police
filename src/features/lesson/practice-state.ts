@@ -23,6 +23,13 @@ export function createInitialPracticeState(
   };
 }
 
+export function mergeRecentPracticeAttempts(
+  earlierAttempts: PracticeAttempt[],
+  currentAttempts: PracticeAttempt[],
+) {
+  return [...earlierAttempts, ...currentAttempts].slice(-8);
+}
+
 type RecordPracticeAttemptInput = Readonly<{
   exercise: AdaptiveExercise;
   exerciseDifficulty: ExerciseDifficulty;
@@ -36,6 +43,9 @@ export function recordPracticeAttempt(
 ): SkillPracticeState {
   const attempt: PracticeAttempt = {
     prompt: input.exercise.prompt,
+    exerciseContent: `${input.exercise.prompt} ${input.exercise.choices.join(" | ")}`,
+    correctAnswer: input.exercise.choices[input.exercise.correctChoice],
+    exerciseType: input.exercise.exerciseType,
     difficulty: input.exerciseDifficulty,
     selectedChoice: input.selectedChoice,
     wasCorrect: input.wasCorrect,

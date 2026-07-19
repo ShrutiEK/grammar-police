@@ -66,12 +66,15 @@ describe("picture conversation assessment schema", () => {
       parsePictureConversationProviderMetric("grammar", {
         band: "developing",
         confidence: "high",
+        correctedText: "The children are playing.",
         evidenceQuote: "The children is playing.",
         evidenceTurn: "scene_description",
+        findingStatus: "supported",
         metricId: "grammar",
         nextSkill: "subject_verb_agreement",
         observation: "The plural subject needs a matching verb.",
         strength: "You shared a complete idea.",
+        unmappedSkill: "",
         unavailableReason: "",
       }),
     ).toEqual({
@@ -79,11 +82,13 @@ describe("picture conversation assessment schema", () => {
       confidence: "high",
       evidence: [
         {
+          correctedText: "The children are playing.",
           learnerText: "The children is playing.",
           observation: "The plural subject needs a matching verb.",
           turn: "scene_description",
         },
       ],
+      findingStatus: "supported",
       id: "grammar",
       nextSkill: "subject_verb_agreement",
       status: "assessed",
@@ -96,12 +101,15 @@ describe("picture conversation assessment schema", () => {
       parsePictureConversationProviderMetric("spoken_fluency", {
         band: "not_assessed",
         confidence: "low",
+        correctedText: "",
         evidenceQuote: "",
         evidenceTurn: "none",
+        findingStatus: "not_assessed",
         metricId: "spoken_fluency",
         nextSkill: "none",
         observation: "",
         strength: "",
+        unmappedSkill: "",
         unavailableReason: "The recording duration is unavailable.",
       }),
     ).toEqual({
@@ -110,6 +118,30 @@ describe("picture conversation assessment schema", () => {
       id: "spoken_fluency",
       status: "not_assessed",
       unavailableReason: "The recording duration is unavailable.",
+    });
+  });
+
+  it("keeps a no-gap assessment without forcing a next skill", () => {
+    expect(
+      parsePictureConversationProviderMetric("grammar", {
+        band: "strong",
+        confidence: "high",
+        correctedText: "",
+        evidenceQuote: "She's playing football.",
+        evidenceTurn: "scene_description",
+        findingStatus: "no_gap",
+        metricId: "grammar",
+        nextSkill: "none",
+        observation: "The sentence uses a clear verb phrase.",
+        strength: "You formed this sentence accurately.",
+        unavailableReason: "",
+        unmappedSkill: "",
+      }),
+    ).toMatchObject({
+      band: "strong",
+      findingStatus: "no_gap",
+      id: "grammar",
+      status: "assessed",
     });
   });
 

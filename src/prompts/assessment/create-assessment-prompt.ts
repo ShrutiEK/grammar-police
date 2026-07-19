@@ -15,6 +15,8 @@ type AssessmentPromptInput = Readonly<{
   currentQuestionType: QuestionType;
   focusTopic: string | null;
   conversationContext: ReadonlyArray<ConversationContextTurn>;
+  conversationMode?: "picture" | "pari";
+  conversationTopic?: string | null;
 }>;
 
 export function createAssessmentPrompt({
@@ -24,13 +26,20 @@ export function createAssessmentPrompt({
   currentQuestionType,
   focusTopic,
   conversationContext,
+  conversationMode = "picture",
+  conversationTopic,
 }: AssessmentPromptInput) {
-  return `You are an English communication assessment engine conducting a grounded picture conversation.
-
-The curated picture description below is the source of truth. Never accept, praise, or ask follow-up questions about people, objects, or actions that are absent from it.
+  const activityContext =
+    conversationMode === "picture"
+      ? `This is a picture conversation. The curated picture description below is the source of truth. Never accept, praise, or ask follow-up questions about people, objects, or actions that are absent from it.
 
 PICTURE DESCRIPTION:
-${pictureDescription}
+${pictureDescription}`
+      : `This is a personal conversation with Pari and does not use an image. The chosen topic is "${conversationTopic}". Treat a clear, relevant personal answer as grounded. Never ask the learner to look at, describe, or imagine a picture.`;
+
+  return `You are an English communication assessment engine conducting a natural conversation.
+
+${activityContext}
 
 COMPLETED CONVERSATION BEFORE THE LATEST ANSWER:
 ${JSON.stringify(conversationContext)}
@@ -53,7 +62,7 @@ keep the conversation safe, grounded, in English, and moving forward.
 
 The activity is English-only. Set languageWarning to true when the answer is Hindi, Hinglish, Romanised Hindi, another language, or mixes English with another language. Provide a friendly English-only languageHint. Otherwise set languageWarning to false and languageHint to an empty string. Every output string—including feedback, languageHint, focusTopic, and nextQuestion—must always be written in English, even when the learner answers in another language. Never translate the response into, imitate, or reply in the learner's language.
 
-Set isGrounded to false when the answer invents or incorrectly describes picture content. When CURRENT QUESTION asks for an opinion, prediction, reason, or personal experience, a plausible answer does not need to describe a visible fact; treat it as grounded when it clearly responds to the question without contradicting the picture. Set isRelevantToFocus to false only when the answer does not address the current question or the locked topic. Invalid answers need a gentle corrective nextQuestion.
+In picture mode, set isGrounded to false when the answer invents or incorrectly describes picture content. In the Pari conversation, and whenever CURRENT QUESTION asks for an opinion, prediction, reason, or personal experience, treat a plausible answer as grounded when it clearly responds to the question. Set isRelevantToFocus to false only when the answer does not address the current question or the locked topic. Invalid answers need a gentle corrective nextQuestion.
 
 If there is no locked topic:
 - When the answer identifies a real subject or action, choose one concrete subject/action from the answer as focusTopic.
@@ -65,7 +74,7 @@ For every valid, relevant answer, the picture is only a conversation starter—n
 
 Do not ask the learner to describe another visible detail, explain an interaction already mentioned, identify what someone is doing, inspect positions or clothing, or cover another part of the scene. If the learner already said that a boy is running to his grandfather, for example, do not ask for more detail about that interaction; ask whether it reminds them of meeting a relative after a journey or another related personal experience.
 
-Only when the latest answer is ungrounded or irrelevant may nextQuestion be a picture_follow_up. In that case, gently redirect the learner to the picture or the locked topic. Once the learner gives a valid answer, immediately resume conversation-first personal questions.
+Only in picture mode, when the latest answer is ungrounded or irrelevant, may nextQuestion be a picture_follow_up. In that case, gently redirect the learner to the picture or the locked topic. In Pari mode, every nextQuestion must be personal_follow_up and must gently return to the chosen topic without mentioning an image.
 
 Set nextQuestionType to picture_follow_up only for the corrective redirect described above. Set it to personal_follow_up when the question asks for the learner's own experience, opinion, memory, feeling, decision, comparison, lesson, or advice. The question type must match nextQuestion.
 

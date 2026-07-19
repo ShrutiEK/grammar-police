@@ -6,6 +6,7 @@ import {
   getDifficultyGuidance,
   getExerciseBlueprint,
 } from "../../features/lesson/exercise-blueprint";
+import { createExerciseDiversityGuidance } from "../../features/lesson/exercise-diversity";
 
 export function createAdaptiveExercisePrompt(
   input: GenerateAdaptiveExerciseRequest,
@@ -18,7 +19,7 @@ export function createAdaptiveExercisePrompt(
       : input.recentAttempts
           .map(
             (attempt) =>
-              `- Level ${attempt.difficulty}: ${attempt.wasCorrect ? "correct" : `incorrect choice: ${attempt.selectedChoice}`}${attempt.hintUsed ? " (hint shown)" : ""}`,
+              `- Level ${attempt.difficulty}${attempt.exerciseType ? ` ${attempt.exerciseType}` : ""}: ${attempt.wasCorrect ? "correct" : `incorrect choice: ${attempt.selectedChoice}`}${attempt.correctAnswer ? `; target answer: ${attempt.correctAnswer}` : ""}${attempt.hintUsed ? " (hint shown)" : ""}`,
           )
           .join("\n");
   const fewShots = blueprint.fewShots
@@ -31,6 +32,7 @@ export function createAdaptiveExercisePrompt(
     .map((exerciseType) => exerciseFormatExamples[exerciseType])
     .join("\n\n");
   const consecutiveIncorrect = countRecentIncorrect(input);
+  const diversityGuidance = createExerciseDiversityGuidance(input);
   const supportInstruction =
     consecutiveIncorrect >= 2
       ? "The learner has missed this level repeatedly. Keep the requested difficulty, use a different allowed format if possible, and make the hint and explanation more explicit with a tiny worked example."
@@ -59,6 +61,10 @@ ${recentAttempts}
 
 PREVIOUS PROMPTS TO AVOID REPEATING:
 ${previousPrompts}
+
+VARIETY REQUIREMENT:
+${diversityGuidance}
+Every new exercise must practise the same skill through a new example. Do not stay on the assessment scene or reuse the setting, noun, action, or scenario from a previous exercise. Few-shot examples demonstrate structure only; do not copy their subject matter.
 
 ADAPTIVE SUPPORT:
 ${supportInstruction}
