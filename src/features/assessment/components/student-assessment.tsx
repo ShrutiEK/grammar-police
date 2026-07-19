@@ -41,7 +41,6 @@ import {
   AssessmentResults,
   type AssessmentCtaAction,
 } from "./assessment-results";
-import { ConversationTrail } from "./conversation-trail";
 import { ConversationHistory } from "./conversation-history";
 import { PictureConversationResults } from "./picture-conversation-results";
 import { PicturePromptCard } from "./picture-prompt-card";
@@ -473,14 +472,10 @@ export function StudentAssessment({
     <main className="min-h-screen bg-[radial-gradient(circle_at_10%_12%,var(--color-accent-soft)_0,transparent_24%),radial-gradient(circle_at_88%_78%,var(--color-support)_0,transparent_29%)] px-3 py-4 sm:px-5 sm:py-6">
       <section className="mx-auto max-w-6xl space-y-4">
         <header className="flex justify-end">
-          <p className="rounded-full border border-ink/20 bg-surface px-3 py-1 text-base font-bold text-muted">
+          <p className="rounded-full border border-ink/20 bg-surface px-2 py-0.5 text-sm font-bold text-muted sm:px-3 sm:py-1 sm:text-base">
             English only
           </p>
         </header>
-
-        <ConversationTrail
-          currentQuestionNumber={session.questionsAndAnswers.length}
-        />
 
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
           <PicturePromptCard
