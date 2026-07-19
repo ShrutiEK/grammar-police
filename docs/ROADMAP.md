@@ -35,6 +35,9 @@ a relevant personal question, and see feedback tied to both turns.
 
 ## Milestone 2 — Trustworthy assessment and explanations
 
+The detailed contract for picture-conversation metrics lives in
+[`METRICS_SPEC.md`](METRICS_SPEC.md).
+
 - [ ] Define evidence-backed metrics for grammar, vocabulary, communication,
       confidence, fluency, and pronunciation.
 - [ ] Add CEFR level, strengths, learning gaps, and recommended concepts to the
